@@ -49,7 +49,7 @@ const formSchema = z.object({
 }, { message: "กรุณาเลือกไซส์สำหรับ Everysite", path: ["size"] })
 .refine((data) => {
   if (data.request_type === "everysite" && data.size === "S") {
-    // กรอกกี่ตัวก็ได้ แค่ต้องมีค่า
+ 
     const raw = (data.size_code || "").replace(/,/g, "");
     return raw.length > 0;
   }
@@ -219,8 +219,7 @@ const CreateRequest = () => {
 
       const requestId = res.data?.id;
       let uploadedDriveUrl = "";
-
-      // ✅ Upload files to Google Drive และเก็บ URL แรกที่ได้
+      
       if (requestId && files.length > 0) {
         const zoneName = profile.zone_id ? `Zone-${profile.zone_id}` : "Unknown";
         for (const f of files) {
@@ -250,7 +249,6 @@ const CreateRequest = () => {
           }
         }
 
-        // ✅ ส่ง LINE แจ้งเตือนครั้งเดียว หลังอัปโหลดเสร็จ (มี drive_url ถ้าอัปโหลดสำเร็จ)
         await apiPost({
           mode: "notify_line",
           type: "request_created",
@@ -414,7 +412,6 @@ const CreateRequest = () => {
               </CardContent>
             </Card>
 
-            {/* ✅ ช่องกรอกรหัสไซส์ S */}
             {selectedType === "everysite" && selectedSize === "S" && (
               <Card className="border-primary/50">
                 <CardHeader>
@@ -423,7 +420,7 @@ const CreateRequest = () => {
                     <Badge variant="outline" className="text-xs">บังคับ</Badge>
                   </CardTitle>
                   <CardDescription>
-                    กรอกรหัสตัวอักษรและตัวเลข ระบบจะใส่ , ให้อัตโนมัติทุก 6 ตัว เช่น A12121,121221,212121
+                    กรอกรหัสตัวอักษรและตัวเลข  เช่น Axxxxx,xx
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -431,7 +428,7 @@ const CreateRequest = () => {
                     control={form.control}
                     name="size_code"
                     render={({ field }) => {
-                      // แสดงจำนวนรหัสที่กรอกแล้ว
+                      
                       return (
                         <FormItem>
                           <FormLabel>รหัส *</FormLabel>
@@ -443,7 +440,7 @@ const CreateRequest = () => {
                                 let value = e.target.value;
                                 value = value.replace(/[^A-Za-z0-9]/g, "");
                                 value = value.toUpperCase();
-                                // ✅ ใส่ , ทุก 6 ตัวอัตโนมัติ กรอกกี่ตัวก็ได้
+                           
                                 const chunks = value.match(/.{1,6}/g);
                                 const formatted = chunks ? chunks.join(",") : "";
                                 field.onChange(formatted);
