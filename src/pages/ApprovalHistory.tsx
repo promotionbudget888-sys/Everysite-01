@@ -56,8 +56,10 @@ export default function ApprovalHistory() {
       const payload: Record<string, string> = {
         mode: "list",
         status: "history",
+        role: profile.role,
       };
 
+      // zone_approver กรองด้วย zone_id
       if (profile.role !== "admin" && profile.zone_id) {
         payload.zone_id = profile.zone_id;
       }
