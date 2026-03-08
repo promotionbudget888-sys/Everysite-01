@@ -20,7 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Search, FileText, RefreshCw, Eye, Plus, Pencil, Trash2, FolderOpen, ExternalLink,
+  Search, FileText, RefreshCw, Eye, Plus, Pencil, Trash2, FolderOpen, ExternalLink, Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -55,6 +55,45 @@ interface DriveFile {
   fileUrl: string;
 }
 
+
+// ✅ Component ดึง Drive URL จาก GAS แล้วเปิด
+function DriveButton({ requestId }: { requestId: string }) {
+  const [loading, setLoading] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  const handleOpen = async () => {
+    if (url) { window.open(url, "_blank"); return; }
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await apiPost({ mode: "get_drive_url", id: requestId });
+      if (res.success && res.data?.drive_url) {
+        setUrl(res.data.drive_url);
+        window.open(res.data.drive_url, "_blank");
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <Button variant="outline" className="w-full gap-2" onClick={handleOpen} disabled={loading}>
+        {loading
+          ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังโหลด...</>
+          : <><FolderOpen className="h-4 w-4" />ดูเอกสารใน Google Drive<ExternalLink className="h-3.5 w-3.5 ml-auto" /></>
+        }
+      </Button>
+      {error && <p className="text-xs text-destructive mt-1.5 text-center">ไม่พบโฟลเดอร์เอกสาร</p>}
+    </div>
+  );
+}
+
 const MyRequests = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -67,9 +106,6 @@ const MyRequests = () => {
 
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
-  const [driveUrl, setDriveUrl] = useState<string>("");
-  const [driveLoading, setDriveLoading] = useState(false);
-
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<Request | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -96,30 +132,9 @@ const MyRequests = () => {
     setLoading(false);
   };
 
-  const openViewDialog = async (req: Request) => {
+  const openViewDialog = (req: Request) => {
     setSelectedRequest(req);
-    setDriveUrl("");
     setViewDialogOpen(true);
-
-    // ดึง Drive folder URL ของ request นี้
-    setDriveLoading(true);
-    try {
-      const res = await apiPost({ mode: "get", id: req.id });
-      if (res.success && res.data) {
-        // ลอง get drive url จาก GAS
-        const driveRes = await apiPost({
-          mode: "upload_attachment",
-          dryRun: true,
-          requestId: req.id,
-          zoneName: profile?.zone_id ? `โซน ${profile.zone_id}` : "general",
-          fileName: "_check",
-          fileContent: "",
-          mimeType: "text/plain",
-        }).catch(() => null);
-        // ถ้าไม่ได้ก็ใช้ root folder link
-      }
-    } catch { /* ไม่มี drive url */ }
-    setDriveLoading(false);
   };
 
   const getStatusBadge = (status: string) => {
@@ -432,24 +447,7 @@ const MyRequests = () => {
               {/* ปุ่มดูเอกสาร Drive */}
               <div className="border-t pt-4">
                 <p className="text-xs text-muted-foreground mb-2">เอกสารแนบ</p>
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => {
-                    const shortId = selectedRequest.id.substring(0, 8);
-                    const zoneName = profile?.zone_id ? `โซน ${profile.zone_id}` : "general";
-                    // ลิงค์ค้นหาใน Google Drive
-                    const searchUrl = `https://drive.google.com/drive/search?q=Request-${shortId}`;
-                    window.open(searchUrl, "_blank");
-                  }}
-                >
-                  <FolderOpen className="h-4 w-4" />
-                  ดูเอกสารใน Google Drive
-                  <ExternalLink className="h-3.5 w-3.5 ml-auto" />
-                </Button>
-                <p className="text-xs text-muted-foreground mt-1.5 text-center">
-                  ค้นหาโฟลเดอร์ "Request-{selectedRequest.id.substring(0, 8)}" ใน Drive
-                </p>
+                <DriveButton requestId={selectedRequest.id} />
               </div>
 
             </div>
