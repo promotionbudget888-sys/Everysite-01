@@ -48,24 +48,23 @@ export default function ApprovalHistory() {
   }, [profile?.id]);
 
   const fetchHistoryRequests = async () => {
+    if (!profile) return;
     setLoading(true);
     try {
-      // ส่ง role ไปด้วยเพื่อให้ GAS filter ถูกต้อง
-      // status: "history" = approved, competing, paid, rejected
+      // admin → ดูทั้งหมด
+      // zone_approver_1/2 → กรองด้วย zone_id (ถ้ามี)
       const payload: Record<string, string> = {
         mode: "list",
         status: "history",
       };
 
-      // ถ้าเป็น zone_approver ให้กรองด้วย zone_id (ถ้ามี)
-      if (profile?.zone_id && profile.role !== "admin") {
+      if (profile.role !== "admin" && profile.zone_id) {
         payload.zone_id = profile.zone_id;
       }
 
       const res = await apiPost(payload);
       if (res.success && Array.isArray(res.data)) {
-        // เรียงล่าสุดก่อน
-        const sorted = res.data.sort(
+        const sorted = [...res.data].sort(
           (a: Request, b: Request) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
