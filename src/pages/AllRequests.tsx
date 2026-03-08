@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, FileText, RefreshCw, Eye, CheckCircle, XCircle, RotateCcw, Trophy, Banknote, SendHorizontal } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { apiPost } from "@/lib/api";
@@ -67,6 +68,7 @@ export default function AllRequests() {
   const [actionType, setActionType] = useState<string>("");
   const [actionNotes, setActionNotes] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [usedAmount, setUsedAmount] = useState<string>("");
 
   const isAdmin = profile?.role === "admin";
 
@@ -134,6 +136,7 @@ export default function AllRequests() {
     setSelectedRequest(req);
     setActionType(action);
     setActionNotes("");
+    setUsedAmount(String(req.amount || ""));
     setActionDialogOpen(true);
   };
 
@@ -175,7 +178,10 @@ export default function AllRequests() {
       status:        newStatus,
       notes:         actionNotes,
       approver_name: approverName,
-      ...(actionType === "reject" && { rejected_reason: actionNotes }),
+      requester_id:  selectedRequest.requester_id,
+      request_type:  selectedRequest.request_type,
+      ...(actionType === "reject"    && { rejected_reason: actionNotes }),
+      ...(actionType === "set_paid"  && { used_amount: Number(usedAmount) || 0 }),
     });
 
     if (!res.success) {
@@ -482,6 +488,27 @@ export default function AllRequests() {
             <div className="text-sm bg-muted px-3 py-2 rounded-md">
               ผู้ดำเนินการ: <span className="font-medium">{profile?.full_name}</span>
             </div>
+            {actionType === "set_paid" && (
+              <div>
+                <label className="text-sm font-medium">งบที่ใช้จริง (บาท) *</label>
+                <div className="relative mt-1">
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder={`ยอดคำขอ ${Number(selectedRequest?.amount || 0).toLocaleString()} บาท`}
+                    value={usedAmount}
+                    onChange={(e) => setUsedAmount(e.target.value)}
+                    className="pr-12"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">บาท</span>
+                </div>
+                {selectedRequest && Number(usedAmount) !== selectedRequest.amount && usedAmount !== "" && (
+                  <p className="text-xs text-warning mt-1">
+                    ยอดคำขอเดิม {Number(selectedRequest.amount).toLocaleString()} บาท
+                  </p>
+                )}
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium">
                 {actionType === "reject" ? "เหตุผลในการปฏิเสธ *" : "หมายเหตุ (ถ้ามี)"}
