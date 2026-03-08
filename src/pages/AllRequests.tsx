@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, FileText, RefreshCw, Eye, CheckCircle, XCircle, RotateCcw, Trophy, Banknote, SendHorizontal, FolderOpen, ExternalLink } from "lucide-react";
+import { Search, FileText, RefreshCw, Eye, CheckCircle, XCircle, RotateCcw, Trophy, Banknote, SendHorizontal, FolderOpen, ExternalLink, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -54,6 +54,45 @@ const ACTION_LABELS: Record<string, string> = {
   set_competing: "อยู่ระหว่างแข่งขัน",
   set_paid:      "อนุมัติจ่าย",
 };
+
+
+// ✅ Component ดึง Drive URL จาก GAS แล้วเปิด
+function DriveButton({ requestId }: { requestId: string }) {
+  const [loading, setLoading] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  const handleOpen = async () => {
+    if (url) { window.open(url, "_blank"); return; }
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await apiPost({ mode: "get_drive_url", id: requestId });
+      if (res.success && res.data?.drive_url) {
+        setUrl(res.data.drive_url);
+        window.open(res.data.drive_url, "_blank");
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <Button variant="outline" className="w-full gap-2" onClick={handleOpen} disabled={loading}>
+        {loading
+          ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังโหลด...</>
+          : <><FolderOpen className="h-4 w-4" />ดูเอกสารใน Google Drive<ExternalLink className="h-3.5 w-3.5 ml-auto" /></>
+        }
+      </Button>
+      {error && <p className="text-xs text-destructive mt-1.5 text-center">ไม่พบโฟลเดอร์เอกสาร</p>}
+    </div>
+  );
+}
 
 export default function AllRequests() {
   const { profile } = useAuth();
@@ -471,21 +510,7 @@ export default function AllRequests() {
               {/* ปุ่มดูเอกสาร Drive */}
               <div className="border-t pt-4">
                 <p className="text-xs text-muted-foreground mb-2">เอกสารแนบ</p>
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => {
-                    const shortId = selectedRequest.id.substring(0, 8);
-                    window.open(`https://drive.google.com/drive/search?q=Request-${shortId}`, "_blank");
-                  }}
-                >
-                  <FolderOpen className="h-4 w-4" />
-                  ดูเอกสารใน Google Drive
-                  <ExternalLink className="h-3.5 w-3.5 ml-auto" />
-                </Button>
-                <p className="text-xs text-muted-foreground mt-1.5 text-center">
-                  ค้นหาโฟลเดอร์ "Request-{selectedRequest.id.substring(0, 8)}" ใน Drive
-                </p>
+                <DriveButton requestId={selectedRequest.id} />
               </div>
             </div>
           )}
