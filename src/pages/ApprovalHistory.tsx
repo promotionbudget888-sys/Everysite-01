@@ -51,26 +51,30 @@ export default function ApprovalHistory() {
     if (!profile) return;
     setLoading(true);
     try {
-      // admin → ดูทั้งหมด
-      // zone_approver_1/2 → กรองด้วย zone_id (ถ้ามี)
-      const payload: Record<string, string> = {
-        mode: "list",
-        status: "history",
-        role: profile.role,
-      };
-
-      // zone_approver กรองด้วย zone_id
-      if (profile.role !== "admin" && profile.zone_id) {
-        payload.zone_id = profile.zone_id;
-      }
-
-      const res = await apiPost(payload);
+      // ดึงทั้งหมดมาก่อน แล้ว filter ฝั่ง frontend ตาม role
+      const res = await apiPost({ mode: "list" });
       if (res.success && Array.isArray(res.data)) {
-        const sorted = [...res.data].sort(
-          (a: Request, b: Request) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        let filtered: Request[] = res.data;
+
+        const historyStatuses = ["zone_review_2","admin_finalize","approved","competing","paid","rejected","returned"];
+
+        if (profile.role === "zone_approver_1") {
+          // L1 อนุมัติแล้ว → คำขอจะเลย zone_review_1 ไปแล้ว
+          filtered = filtered.filter(r => historyStatuses.includes(r.status));
+        } else if (profile.role === "zone_approver_2") {
+          // L2 อนุมัติแล้ว → คำขอจะเลย zone_review_2 ไปแล้ว
+          filtered = filtered.filter(r =>
+            ["admin_finalize","approved","competing","paid","rejected"].includes(r.status)
+          );
+        } else {
+          // admin ดูทั้งหมดที่ผ่านการดำเนินการ
+          filtered = filtered.filter(r => historyStatuses.includes(r.status));
+        }
+
+        filtered.sort((a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
-        setRequests(sorted);
+        setRequests(filtered);
       } else {
         setRequests([]);
       }
