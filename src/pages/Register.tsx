@@ -189,7 +189,7 @@ export default function Register() {
                   <SelectTrigger className="h-11">
                     <SelectValue placeholder="เลือกสายการตลาด" />
                   </SelectTrigger>
-                  <SelectContent className="z-[200] bg-popover">
+                  <SelectContent className="z-[9999] bg-popover" position="popper" sideOffset={4}>
                     <SelectItem value="นครหลวง">นครหลวง</SelectItem>
                     <SelectItem value="ภูมิภาค">ภูมิภาค</SelectItem>
                   </SelectContent>
@@ -202,7 +202,7 @@ export default function Register() {
                   <SelectTrigger className="h-11">
                     <SelectValue placeholder="เลือกโซน (1-16)" />
                   </SelectTrigger>
-                  <SelectContent className="z-[200] bg-popover">
+                  <SelectContent className="z-[9999] bg-popover" position="popper" sideOffset={4}>
                     {zones.filter((z) => z.id !== "6").map((z) => (
                       <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
                     ))}
