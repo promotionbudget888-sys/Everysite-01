@@ -32,6 +32,7 @@ export default function Register() {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [zones, setZones] = useState<ZoneOption[]>([]);
+  const [zonesLoading, setZonesLoading] = useState(true);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -50,12 +51,15 @@ export default function Register() {
     };
 
     const fetchZones = async () => {
+      setZonesLoading(true);
       try {
         const res = await apiPost<unknown>({ mode: 'zones' });
         const zoneList = normalizeZones(res.data);
         setZones(zoneList.length > 0 ? zoneList : FALLBACK_ZONES);
       } catch {
         setZones(FALLBACK_ZONES);
+      } finally {
+        setZonesLoading(false);
       }
     };
 
@@ -199,11 +203,16 @@ export default function Register() {
               <div className="space-y-2">
                 <Label>โซน *</Label>
                 <Select value={zoneId} onValueChange={setZoneId}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="เลือกโซน (1-16)" />
+                  <SelectTrigger className="h-11" disabled={zonesLoading}>
+                    <SelectValue placeholder={zonesLoading ? "กำลังโหลดโซน..." : "เลือกโซน (1-16)"} />
                   </SelectTrigger>
                   <SelectContent className="z-[9999] bg-popover" position="popper" sideOffset={4}>
-                    {zones.filter((z) => z.id !== "6").map((z) => (
+                    {zonesLoading ? (
+                      <div className="flex items-center justify-center py-4 gap-2 text-sm text-muted-foreground">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                        กำลังโหลดโซน...
+                      </div>
+                    ) : zones.filter((z) => z.id !== "6").map((z) => (
                       <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
                     ))}
                   </SelectContent>
