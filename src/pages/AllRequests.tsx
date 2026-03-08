@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, FileText, RefreshCw, Eye, CheckCircle, XCircle, RotateCcw, Trophy, Banknote, SendHorizontal } from "lucide-react";
+import { Search, FileText, RefreshCw, Eye, CheckCircle, XCircle, RotateCcw, Trophy, Banknote, SendHorizontal, FolderOpen, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -467,6 +467,26 @@ export default function AllRequests() {
                   <p className="text-sm">{selectedRequest.rejected_reason}</p>
                 </div>
               )}
+
+              {/* ปุ่มดูเอกสาร Drive */}
+              <div className="border-t pt-4">
+                <p className="text-xs text-muted-foreground mb-2">เอกสารแนบ</p>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => {
+                    const shortId = selectedRequest.id.substring(0, 8);
+                    window.open(`https://drive.google.com/drive/search?q=Request-${shortId}`, "_blank");
+                  }}
+                >
+                  <FolderOpen className="h-4 w-4" />
+                  ดูเอกสารใน Google Drive
+                  <ExternalLink className="h-3.5 w-3.5 ml-auto" />
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1.5 text-center">
+                  ค้นหาโฟลเดอร์ "Request-{selectedRequest.id.substring(0, 8)}" ใน Drive
+                </p>
+              </div>
             </div>
           )}
           <DialogFooter>
