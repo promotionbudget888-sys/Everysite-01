@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Clock, Eye, CheckCircle, XCircle, Loader2, FileText, Download, Paperclip } from "lucide-react";
+import { Clock, Eye, CheckCircle, XCircle, Loader2, FileText, Download, Paperclip, FolderOpen, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { apiPost } from "@/lib/api";
 import { getStatusConfig } from "@/lib/statusUtils";
@@ -39,6 +39,44 @@ interface Request {
   attachments?: Attachment[];
 }
 
+// ✅ Component ดึง Drive URL จาก GAS แล้วเปิด
+function DriveButton({ requestId }: { requestId: string }) {
+  const [loading, setLoading] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  const handleOpen = async () => {
+    if (url) { window.open(url, "_blank"); return; }
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await apiPost({ mode: "get_drive_url", id: requestId });
+      if (res.success && res.data?.drive_url) {
+        setUrl(res.data.drive_url);
+        window.open(res.data.drive_url, "_blank");
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <Button variant="outline" className="w-full gap-2" onClick={handleOpen} disabled={loading}>
+        {loading
+          ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังโหลด...</>
+          : <><FolderOpen className="h-4 w-4" />ดูเอกสารใน Google Drive<ExternalLink className="h-3.5 w-3.5 ml-auto" /></>
+        }
+      </Button>
+      {error && <p className="text-xs text-destructive mt-1.5 text-center">ไม่พบโฟลเดอร์เอกสาร</p>}
+    </div>
+  );
+}
+
 export default function PendingApprovals() {
   const { profile } = useAuth();
   const [requests, setRequests] = useState<Request[]>([]);
@@ -61,7 +99,6 @@ export default function PendingApprovals() {
   const fetchPendingRequests = async () => {
     setLoading(true);
     try {
-      // Determine which status to fetch based on role
       const targetStatus = isZoneApprover1
         ? "zone_review_1"
         : isZoneApprover2
@@ -75,7 +112,6 @@ export default function PendingApprovals() {
         status: targetStatus,
       });
       if (res.success && Array.isArray(res.data)) {
-        // Filter based on role on frontend as well
         const filtered = res.data.filter((r: Request) => {
           if (isAdmin) return r.status === "submitted" || r.status === "admin_finalize";
           if (isZoneApprover1) return r.status === "zone_review_1";
@@ -103,21 +139,12 @@ export default function PendingApprovals() {
   const getNextStatus = (currentStatus: string, action: "approve" | "reject"): string => {
     if (action === "reject") return "rejected";
     switch (currentStatus) {
-      case "submitted": return "zone_review_1";
-      case "zone_review_1": return "zone_review_2";
-      case "zone_review_2": return "admin_finalize";
+      case "submitted":      return "zone_review_1";
+      case "zone_review_1":  return "zone_review_2";
+      case "zone_review_2":  return "admin_finalize";
       case "admin_finalize": return "approved";
-      default: return currentStatus;
+      default:               return currentStatus;
     }
-  };
-
-  const buildAttachmentLinks = (attachments?: Attachment[]): string => {
-    if (!attachments || attachments.length === 0) return "";
-    const links = attachments
-      .filter(a => a.file_url)
-      .map((a, i) => `📎 ไฟล์ ${i + 1}: ${a.file_name}\n${a.file_url}`)
-      .join("\n");
-    return links ? `\n\n📂 เอกสารแนบ:\n${links}` : "";
   };
 
   const handleAction = async () => {
@@ -125,18 +152,13 @@ export default function PendingApprovals() {
     setProcessing(true);
     try {
       const newStatus = getNextStatus(selectedRequest.status, actionType);
-      const attachmentLinks = buildAttachmentLinks(selectedRequest.attachments);
       const res = await apiPost({
-        mode: actionType,
+        mode: actionType === "approve" ? "update_status" : "reject",
         id: selectedRequest.id,
         status: newStatus,
         notes,
+        approver_name: profile?.full_name || "-",
         rejected_reason: actionType === "reject" ? notes : undefined,
-        attachment_links: attachmentLinks,
-        attachments: selectedRequest.attachments?.map(a => ({
-          file_name: a.file_name,
-          file_url: a.file_url,
-        })) || [],
       });
       if (!res.success) throw new Error(res.error);
       toast.success(actionType === "approve" ? "อนุมัติคำขอเรียบร้อย" : "ปฏิเสธคำขอเรียบร้อย");
@@ -150,14 +172,13 @@ export default function PendingApprovals() {
   };
 
   const getPageTitle = () => {
-    if (isAdmin) return "คำขอรอตรวจสอบ / อนุมัติขั้นสุดท้าย";
     if (isZoneApprover1) return "คำขอรออนุมัติ (Level 1)";
     if (isZoneApprover2) return "คำขอรออนุมัติ (Level 2)";
     return "คำขอรออนุมัติ";
   };
 
   const getActionLabel = (request: Request) => {
-    if (isAdmin && request.status === "submitted") return "ตรวจสอบผ่าน";
+    if (isAdmin && request.status === "submitted")      return "ตรวจสอบผ่าน";
     if (isAdmin && request.status === "admin_finalize") return "อนุมัติขั้นสุดท้าย";
     return "อนุมัติ";
   };
@@ -166,6 +187,7 @@ export default function PendingApprovals() {
     new Date(dateString).toLocaleDateString("th-TH", {
       year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
     });
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", minimumFractionDigits: 0 }).format(amount);
 
@@ -174,8 +196,7 @@ export default function PendingApprovals() {
     const Icon = config.icon;
     return (
       <Badge variant="outline" className={config.color}>
-        <Icon className="h-3 w-3 mr-1" />
-        {config.label}
+        <Icon className="h-3 w-3 mr-1" />{config.label}
       </Badge>
     );
   };
@@ -186,9 +207,7 @@ export default function PendingApprovals() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">{getPageTitle()}</h1>
           <p className="text-muted-foreground">
-            {isAdmin
-              ? "คำขอที่รอการตรวจสอบจากคุณ และคำขอที่รออนุมัติขั้นสุดท้าย"
-              : isZoneApprover1 ? "คำขอที่รอการอนุมัติจากคุณ (Level 1)" : "คำขอที่รอการอนุมัติจากคุณ (Level 2)"}
+            {isZoneApprover1 ? "คำขอที่รอการอนุมัติจากคุณ (Level 1)" : "คำขอที่รอการอนุมัติจากคุณ (Level 2)"}
           </p>
         </div>
 
@@ -240,13 +259,17 @@ export default function PendingApprovals() {
                         <TableCell>{formatDate(request.created_at)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm" onClick={() => { setSelectedRequest(request); setViewDialogOpen(true); }}>
+                            <Button variant="outline" size="sm"
+                              onClick={() => { setSelectedRequest(request); setViewDialogOpen(true); }}>
                               <Eye className="h-4 w-4 mr-1" />ดู
                             </Button>
-                            <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground" onClick={() => openActionDialog(request, "approve")}>
+                            <Button size="sm"
+                              className="bg-success hover:bg-success/90 text-success-foreground"
+                              onClick={() => openActionDialog(request, "approve")}>
                               <CheckCircle className="h-4 w-4 mr-1" />{getActionLabel(request)}
                             </Button>
-                            <Button size="sm" variant="destructive" onClick={() => openActionDialog(request, "reject")}>
+                            <Button size="sm" variant="destructive"
+                              onClick={() => openActionDialog(request, "reject")}>
                               <XCircle className="h-4 w-4 mr-1" />ปฏิเสธ
                             </Button>
                           </div>
@@ -273,46 +296,34 @@ export default function PendingApprovals() {
                 <div><p className="text-sm text-muted-foreground">ชื่อคำขอ</p><p className="font-medium">{selectedRequest.title}</p></div>
                 <div><p className="text-sm text-muted-foreground">จำนวนเงิน</p><p className="font-bold text-lg">{formatCurrency(selectedRequest.amount)}</p></div>
               </div>
+
               <div><p className="text-sm text-muted-foreground">ผู้ขอ</p><p className="font-medium">{selectedRequest.requester_name}</p></div>
-              {selectedRequest.description && <div><p className="text-sm text-muted-foreground">รายละเอียด</p><p className="whitespace-pre-wrap">{selectedRequest.description}</p></div>}
-              {selectedRequest.admin_notes && <div className="bg-muted p-3 rounded-lg"><p className="text-sm text-muted-foreground">หมายเหตุจาก Admin</p><p className="whitespace-pre-wrap">{selectedRequest.admin_notes}</p></div>}
-              {selectedRequest.zone_approver_notes && <div className="bg-primary/5 p-3 rounded-lg border border-primary/20"><p className="text-sm text-muted-foreground">หมายเหตุจากผู้อนุมัติโซน</p><p className="whitespace-pre-wrap">{selectedRequest.zone_approver_notes}</p></div>}
-              
-              {/* Attachments section */}
-              {selectedRequest.attachments && selectedRequest.attachments.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground flex items-center gap-1"><Paperclip className="h-3.5 w-3.5" />เอกสารแนบ ({selectedRequest.attachments.length} ไฟล์)</p>
-                  <div className="space-y-2">
-                    {selectedRequest.attachments.map((att, idx) => (
-                      <div key={att.id || idx} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="h-4 w-4 text-primary shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{att.file_name}</p>
-                            {att.file_size ? <p className="text-xs text-muted-foreground">{(att.file_size / 1024).toFixed(1)} KB</p> : null}
-                          </div>
-                        </div>
-                        {att.file_url && (
-                          <Button variant="outline" size="sm" onClick={() => window.open(att.file_url, "_blank")} className="shrink-0 ml-2">
-                            <Download className="h-3.5 w-3.5 mr-1" />ดูไฟล์
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+
+              {selectedRequest.description && (
+                <div><p className="text-sm text-muted-foreground">รายละเอียด</p><p className="whitespace-pre-wrap bg-muted p-3 rounded-md text-sm">{selectedRequest.description}</p></div>
               )}
-              {(!selectedRequest.attachments || selectedRequest.attachments.length === 0) && (
-                <div className="text-sm text-muted-foreground italic flex items-center gap-1">
-                  <Paperclip className="h-3.5 w-3.5" />ไม่มีเอกสารแนบ
-                </div>
+              {selectedRequest.admin_notes && (
+                <div className="bg-muted p-3 rounded-lg"><p className="text-sm text-muted-foreground">หมายเหตุจาก Admin</p><p className="whitespace-pre-wrap text-sm">{selectedRequest.admin_notes}</p></div>
               )}
-              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+              {selectedRequest.zone_approver_notes && (
+                <div className="bg-primary/5 p-3 rounded-lg border border-primary/20"><p className="text-sm text-muted-foreground">หมายเหตุจากผู้อนุมัติ</p><p className="whitespace-pre-wrap text-sm">{selectedRequest.zone_approver_notes}</p></div>
+              )}
+
+              {/* ✅ ปุ่มดูเอกสาร Drive */}
+              <div className="border-t pt-4">
+                <p className="text-xs text-muted-foreground mb-2">เอกสารแนบ</p>
+                <DriveButton requestId={selectedRequest.id} />
+              </div>
+
+              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
                 <Button variant="outline" onClick={() => setViewDialogOpen(false)}>ปิด</Button>
-                <Button className="bg-success hover:bg-success/90 text-success-foreground" onClick={() => { setViewDialogOpen(false); openActionDialog(selectedRequest, "approve"); }}>
+                <Button
+                  className="bg-success hover:bg-success/90 text-success-foreground"
+                  onClick={() => { setViewDialogOpen(false); openActionDialog(selectedRequest, "approve"); }}>
                   <CheckCircle className="h-4 w-4 mr-1" />{getActionLabel(selectedRequest)}
                 </Button>
-                <Button variant="destructive" onClick={() => { setViewDialogOpen(false); openActionDialog(selectedRequest, "reject"); }}>
+                <Button variant="destructive"
+                  onClick={() => { setViewDialogOpen(false); openActionDialog(selectedRequest, "reject"); }}>
                   <XCircle className="h-4 w-4 mr-1" />ปฏิเสธ
                 </Button>
               </DialogFooter>
@@ -325,16 +336,24 @@ export default function PendingApprovals() {
       <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{actionType === "approve" ? (selectedRequest ? getActionLabel(selectedRequest) : "อนุมัติคำขอ") : "ปฏิเสธคำขอ"}</DialogTitle>
-            <DialogDescription>{selectedRequest?.title} - {formatCurrency(selectedRequest?.amount || 0)}</DialogDescription>
+            <DialogTitle>
+              {actionType === "approve"
+                ? (selectedRequest ? getActionLabel(selectedRequest) : "อนุมัติคำขอ")
+                : "ปฏิเสธคำขอ"}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedRequest?.title} — {formatCurrency(selectedRequest?.amount || 0)}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 py-2">
+            <div className="text-sm bg-muted px-3 py-2 rounded-md">
+              ผู้ดำเนินการ: <span className="font-medium">{profile?.full_name}</span>
+            </div>
             <Textarea
               placeholder={actionType === "reject" ? "กรุณาระบุเหตุผลในการปฏิเสธ..." : "หมายเหตุ (ถ้ามี)..."}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              required={actionType === "reject"}
             />
             {actionType === "reject" && !notes.trim() && (
               <p className="text-sm text-destructive">* กรุณาระบุเหตุผลในการปฏิเสธ</p>
@@ -345,9 +364,15 @@ export default function PendingApprovals() {
             <Button
               onClick={handleAction}
               disabled={processing || (actionType === "reject" && !notes.trim())}
-              className={actionType === "approve" ? "bg-success hover:bg-success/90 text-success-foreground" : "bg-destructive hover:bg-destructive/90"}
+              className={actionType === "approve"
+                ? "bg-success hover:bg-success/90 text-success-foreground"
+                : "bg-destructive hover:bg-destructive/90"}
             >
-              {processing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : actionType === "approve" ? <CheckCircle className="h-4 w-4 mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
+              {processing
+                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                : actionType === "approve"
+                ? <CheckCircle className="h-4 w-4 mr-2" />
+                : <XCircle className="h-4 w-4 mr-2" />}
               {actionType === "approve" ? "ยืนยัน" : "ยืนยันปฏิเสธ"}
             </Button>
           </DialogFooter>
