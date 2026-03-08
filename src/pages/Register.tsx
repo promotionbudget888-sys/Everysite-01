@@ -39,7 +39,6 @@ export default function Register() {
   useEffect(() => {
     const normalizeZones = (raw: unknown): ZoneOption[] => {
       if (!Array.isArray(raw)) return [];
-
       return raw
         .map((item, index) => {
           const zone = item as Record<string, unknown>;
@@ -110,20 +109,7 @@ export default function Register() {
         return;
       }
 
-      const zoneName = zones.find(z => z.id === zoneId)?.name || '-';
-
-      apiPost({
-        mode: 'notify_line',
-        type: 'new_registration',
-        title: '📋 สมัครสมาชิกใหม่',
-        user_name: fullName,
-        user_email: email.trim(),
-        affiliation: affiliation || '-',
-        zone: zoneName,
-        department: department.trim() || '-',
-        branch: branch.trim() || '-',
-        phone: phone.trim() || '-',
-      }).catch(() => {});
+      // ✅ ไม่ส่ง LINE ที่นี่ — GAS จัดการผ่าน sendRegistrationCard() แล้ว
 
       toast({
         title: 'สมัครสมาชิกสำเร็จ',
@@ -142,14 +128,11 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-
-          {/* ✅ เพิ่มโลโก้จาก public/logo.png เท่านั้น */}
           <img
             src="/logo.png"
             alt="Logo"
             className="w-24 h-24 object-contain mx-auto mb-4 drop-shadow-lg"
           />
-
           <h1 className="text-2xl font-bold text-foreground">งบส่งเสริม</h1>
           <p className="text-muted-foreground mt-1">Everysite Funds</p>
         </div>
@@ -162,8 +145,6 @@ export default function Register() {
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-
-              {/* ฟอร์มทั้งหมดเหมือนเดิม ไม่แตะ */}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -244,7 +225,6 @@ export default function Register() {
                   </>
                 )}
               </Button>
-
             </form>
 
             <div className="mt-4 text-center text-sm">
@@ -253,7 +233,6 @@ export default function Register() {
                 เข้าสู่ระบบ
               </Link>
             </div>
-
           </CardContent>
         </Card>
       </div>
