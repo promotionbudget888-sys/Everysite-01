@@ -1,0 +1,13 @@
+project_id = "vjlirdirqrzuzzljaixt"
+
+[functions.google-sheets]
+verify_jwt = false
+
+[functions.google-drive]
+verify_jwt = false
+
+[functions.log-audit]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false

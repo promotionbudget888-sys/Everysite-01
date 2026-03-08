@@ -1,0 +1,30 @@
+-- Add new columns to profiles table
+ALTER TABLE public.profiles 
+ADD COLUMN IF NOT EXISTS first_name text,
+ADD COLUMN IF NOT EXISTS last_name text,
+ADD COLUMN IF NOT EXISTS affiliation text,
+ADD COLUMN IF NOT EXISTS department text,
+ADD COLUMN IF NOT EXISTS branch text;
+
+-- Update full_name to be generated from first_name + last_name
+-- Keep full_name for backward compatibility
+
+-- Insert the 16 zones
+INSERT INTO public.zones (name, description, total_budget, used_budget) VALUES
+('โซน 1', 'โซน 1', 1000000, 0),
+('โซน 2', 'โซน 2', 1000000, 0),
+('โซน 3', 'โซน 3', 1000000, 0),
+('โซน 4', 'โซน 4', 1000000, 0),
+('โซน 5', 'โซน 5', 1000000, 0),
+('โซน 6', 'โซน 6', 1000000, 0),
+('โซน 7', 'โซน 7', 1000000, 0),
+('โซน 8', 'โซน 8', 1000000, 0),
+('โซน 9', 'โซน 9', 1000000, 0),
+('โซน 10', 'โซน 10', 1000000, 0),
+('โซน 11', 'โซน 11', 1000000, 0),
+('โซน 12', 'โซน 12', 1000000, 0),
+('โซน 13', 'โซน 13', 1000000, 0),
+('โซน 14', 'โซน 14', 1000000, 0),
+('โซน 15', 'โซน 15', 1000000, 0),
+('โซน 16', 'โซน 16', 1000000, 0)
+ON CONFLICT DO NOTHING;
