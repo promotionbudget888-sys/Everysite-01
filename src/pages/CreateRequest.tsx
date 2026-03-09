@@ -476,7 +476,10 @@ const CreateRequest = () => {
                     <p className="text-xs text-muted-foreground">กรอกข้อมูลให้ครบแล้วแนบไฟล์ด้านล่าง</p>
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={() => window.open(REQUEST_FORM_VIEW_URL, "_blank")}>ดูเอกสาร</Button>
-                  <Button type="button" variant="default" size="sm" onClick={() => window.open(REQUEST_FORM_VIEW_URL.replace("/view?usp=sharing", "/export?format=pdf"), "_blank")}>
+                  <Button type="button" variant="default" size="sm" onClick={() => {
+                    const fileId = REQUEST_FORM_VIEW_URL.match(/\/d\/([^/]+)/)?.[1];
+                    if (fileId) window.open(`https://drive.google.com/uc?export=download&id=${fileId}`, "_blank");
+                  }}>
                     <Download className="h-3.5 w-3.5 mr-1" />ดาวน์โหลด
                   </Button>
                 </div>
