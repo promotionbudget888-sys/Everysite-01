@@ -1,4 +1,4 @@
-import { FileText, Users, ClipboardList, History, LogOut, Settings, Trophy, Upload } from 'lucide-react';
+import { FileText, Users, ClipboardList, History, LogOut, Settings, Trophy, Upload, Bell } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getRoleLabel } from '@/lib/auth';
@@ -56,8 +56,9 @@ export function AppSidebar() {
       return [
         { title: 'คำขอทั้งหมด', url: '/all-requests', icon: FileText },
         { title: 'จัดการผู้ใช้', url: '/users', icon: Users },
-        // ✅ ลบ จัดการโซน ออกแล้ว
-        { title: 'ประวัติการใช้งาน', url: '/audit-logs', icon: History },
+        { title: 'แจ้งเตือนการจ่าย', url: '/payment-notifications', icon: Bell },
+        { title: 'ประวัติการอนุมัติ', url: '/approval-history', icon: History },
+        { title: 'ประวัติการใช้งาน', url: '/audit-logs', icon: ClipboardList },
         { title: 'ตั้งค่าระบบ', url: '/settings', icon: Settings },
       ];
     }
