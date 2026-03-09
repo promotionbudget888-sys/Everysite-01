@@ -8,9 +8,46 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, Eye, Loader2, Search, History, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Loader2, Search, History, RefreshCw, FolderOpen, ExternalLink } from "lucide-react";
 import { apiPost } from "@/lib/api";
 import { getStatusConfig } from "@/lib/statusUtils";
+
+function DriveButton({ requestId }: { requestId: string }) {
+  const [loading, setLoading] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  const handleOpen = async () => {
+    if (url) { window.open(url, "_blank"); return; }
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await apiPost({ mode: "get_drive_url", id: requestId });
+      if (res.success && res.data?.drive_url) {
+        setUrl(res.data.drive_url);
+        window.open(res.data.drive_url, "_blank");
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <Button variant="outline" className="w-full gap-2" onClick={handleOpen} disabled={loading}>
+        {loading
+          ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังโหลด...</>
+          : <><FolderOpen className="h-4 w-4" />ดูเอกสารใน Google Drive<ExternalLink className="h-3.5 w-3.5 ml-auto" /></>
+        }
+      </Button>
+      {error && <p className="text-xs text-destructive mt-1.5 text-center">ไม่พบโฟลเดอร์เอกสาร</p>}
+    </div>
+  );
+}
 
 interface Request {
   id: string;
@@ -279,6 +316,10 @@ export default function ApprovalHistory() {
               {selectedRequest.final_notes && (
                 <div className="bg-success/5 p-3 rounded-lg border border-success/20"><p className="text-sm text-muted-foreground mb-1">หมายเหตุขั้นสุดท้าย</p><p className="whitespace-pre-wrap text-sm">{selectedRequest.final_notes}</p></div>
               )}
+              <div className="border-t pt-4">
+                <p className="text-xs text-muted-foreground mb-2">เอกสารแนบ</p>
+                <DriveButton requestId={selectedRequest.id} />
+              </div>
             </div>
           )}
         </DialogContent>
