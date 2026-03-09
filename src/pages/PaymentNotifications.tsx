@@ -29,6 +29,7 @@ interface Request {
   affiliation: string | null;
   branch: string | null;
   line_id?: string | null;
+  requester_id?: string;
 }
 
 export default function PaymentNotifications() {
@@ -48,11 +49,32 @@ export default function PaymentNotifications() {
   const fetchPaidRequests = async () => {
     setLoading(true);
     try {
-      const res = await apiPost({ mode: "list" });
-      if (res.success && Array.isArray(res.data)) {
-        const paid = res.data.filter((r: Request) => r.status === "paid");
+      // ดึง requests และ users พร้อมกัน
+      const [reqRes, usersRes] = await Promise.all([
+        apiPost({ mode: "list" }),
+        apiPost({ mode: "users" }),
+      ]);
+
+      if (reqRes.success && Array.isArray(reqRes.data)) {
+        // สร้าง map requester_id → line_id จาก users
+        const lineIdMap: Record<string, string> = {};
+        if (usersRes.success && Array.isArray(usersRes.data)) {
+          usersRes.data.forEach((u: { id: string; line_id?: string }) => {
+            if (u.line_id) lineIdMap[String(u.id)] = u.line_id;
+          });
+        }
+
+        const paid = reqRes.data
+          .filter((r: Request) => r.status === "paid")
+          .map((r: Request) => ({
+            ...r,
+            line_id: lineIdMap[String(r.requester_id)] || null,
+            updated_at: r.updated_at || r.created_at,
+          }));
+
         paid.sort((a: Request, b: Request) =>
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+          new Date(b.updated_at || b.created_at).getTime() -
+          new Date(a.updated_at || a.created_at).getTime()
         );
         setRequests(paid);
       }
