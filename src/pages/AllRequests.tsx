@@ -644,7 +644,6 @@ export default function AllRequests() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AppLayout>
 
       {/* LINE Message Dialog */}
       <Dialog open={lineDialogOpen} onOpenChange={setLineDialogOpen}>
@@ -685,5 +684,6 @@ export default function AllRequests() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </AppLayout>
   );
 }
