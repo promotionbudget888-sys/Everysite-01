@@ -108,6 +108,10 @@ export default function AllRequests() {
   const [actionNotes, setActionNotes] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [usedAmount, setUsedAmount] = useState<string>("");
+  const [lineDialogOpen, setLineDialogOpen] = useState(false);
+  const [lineMessage, setLineMessage] = useState("");
+  const [lineUserId, setLineUserId] = useState("");
+  const [sendingLine, setSendingLine] = useState(false);
 
   const isAdmin = profile?.role === "admin";
 
@@ -262,6 +266,24 @@ export default function AllRequests() {
       }
     }
     setActionLoading(false);
+  };
+
+  const sendLineNotification = async () => {
+    setSendingLine(true);
+    try {
+      await apiPost({
+        mode: "notify_line",
+        type: "payment_notify",
+        message: lineMessage,
+        line_user_id: lineUserId,
+      });
+      toast({ title: "ส่ง LINE สำเร็จ" });
+    } catch {
+      toast({ title: "ส่ง LINE ไม่สำเร็จ", variant: "destructive" });
+    } finally {
+      setSendingLine(false);
+      setLineDialogOpen(false);
+    }
   };
 
   const fmt = (amount: number) =>
@@ -623,5 +645,45 @@ export default function AllRequests() {
         </DialogContent>
       </Dialog>
     </AppLayout>
+
+      {/* LINE Message Dialog */}
+      <Dialog open={lineDialogOpen} onOpenChange={setLineDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5 text-primary" />
+              ส่ง LINE แจ้งเตือนการจ่าย
+            </DialogTitle>
+            <DialogDescription>
+              แก้ไขข้อความก่อนส่งได้ครับ
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="bg-muted rounded-lg p-3 text-sm">
+              <span className="text-muted-foreground">ส่งถึง: </span>
+              <span className={lineUserId ? "text-success font-medium" : "text-warning"}>
+                {lineUserId ? `LINE: ${lineUserId.slice(0, 16)}...` : "ไม่มี LINE ID → ส่งกลุ่ม"}
+              </span>
+            </div>
+            <Textarea
+              value={lineMessage}
+              onChange={e => setLineMessage(e.target.value)}
+              rows={10}
+              className="font-mono text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLineDialogOpen(false)} disabled={sendingLine}>
+              ข้ามการส่ง
+            </Button>
+            <Button onClick={sendLineNotification} disabled={sendingLine || !lineMessage.trim()}>
+              {sendingLine
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />กำลังส่ง...</>
+                : <><Send className="h-4 w-4 mr-2" />ส่ง LINE</>
+              }
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
   );
 }
