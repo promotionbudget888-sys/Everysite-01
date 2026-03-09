@@ -27,6 +27,7 @@ interface UserProfile {
   budget_everysite: number;
   used_matching_fund?: number;
   used_everysite?: number;
+  line_id?: string;
 }
 
 export default function UserManagement() {
@@ -42,6 +43,7 @@ export default function UserManagement() {
   const [editZone, setEditZone] = useState('');
   const [editBudgetMF, setEditBudgetMF] = useState(0);
   const [editBudgetES, setEditBudgetES] = useState(0);
+  const [editLineId, setEditLineId] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => { fetchUsers(); }, []);
@@ -82,6 +84,7 @@ export default function UserManagement() {
     setEditZone(user.zone_id ?? '');
     setEditBudgetMF(user.budget_matching_fund ?? 0);
     setEditBudgetES(user.budget_everysite ?? 0);
+    setEditLineId(user.line_id ?? '');
     setDialogOpen(true);
   };
 
@@ -96,6 +99,7 @@ export default function UserManagement() {
         zone_id: editZone,
         budget_matching_fund: editBudgetMF,
         budget_everysite: editBudgetES,
+        line_id: editLineId,
         approver_name: profile?.full_name || 'ผู้ดูแลระบบ',
       });
       if (res.success) {
@@ -275,6 +279,10 @@ export default function UserManagement() {
                   <label className="text-sm font-medium">งบ ES (บาท)</label>
                   <Input type="number" min={0} value={editBudgetES} onChange={e => setEditBudgetES(Number(e.target.value))} />
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">LINE ID</label>
+                <Input placeholder="เช่น @mylineid หรือ Uxxx..." value={editLineId} onChange={e => setEditLineId(e.target.value)} />
               </div>
             </div>
             <DialogFooter>
