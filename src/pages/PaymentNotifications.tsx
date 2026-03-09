@@ -30,6 +30,7 @@ interface Request {
   branch: string | null;
   line_id?: string | null;
   requester_id?: string;
+  requester_email?: string;
 }
 
 export default function PaymentNotifications() {
@@ -56,11 +57,15 @@ export default function PaymentNotifications() {
       ]);
 
       if (reqRes.success && Array.isArray(reqRes.data)) {
-        // สร้าง map requester_id → line_id จาก users
-        const lineIdMap: Record<string, string> = {};
+        // สร้าง map ทั้ง email และ id → line_id จาก users
+        const lineIdByEmail: Record<string, string> = {};
+        const lineIdById: Record<string, string> = {};
         if (usersRes.success && Array.isArray(usersRes.data)) {
-          usersRes.data.forEach((u: { id: string; line_id?: string }) => {
-            if (u.line_id) lineIdMap[String(u.id)] = u.line_id;
+          usersRes.data.forEach((u: { id: string; email?: string; line_id?: string }) => {
+            if (u.line_id) {
+              if (u.email) lineIdByEmail[u.email.toLowerCase()] = u.line_id;
+              lineIdById[String(u.id)] = u.line_id;
+            }
           });
         }
 
@@ -68,7 +73,10 @@ export default function PaymentNotifications() {
           .filter((r: Request) => r.status === "paid")
           .map((r: Request) => ({
             ...r,
-            line_id: lineIdMap[String(r.requester_id)] || null,
+            line_id:
+              lineIdByEmail[String(r.requester_email || "").toLowerCase()] ||
+              lineIdById[String(r.requester_id)] ||
+              null,
             updated_at: r.updated_at || r.created_at,
           }));
 
