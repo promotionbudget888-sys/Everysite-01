@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-
 import UserManagement from "./pages/UserManagement";
 import Zones from "./pages/Zones";
 import AuditLogs from "./pages/AuditLogs";
@@ -17,6 +16,7 @@ import EditRequest from "./pages/EditRequest";
 import MyRequests from "./pages/MyRequests";
 import PendingApprovals from "./pages/PendingApprovals";
 import ApprovalHistory from "./pages/ApprovalHistory";
+import PaymentNotifications from "./pages/PaymentNotifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,22 +33,18 @@ const App = () => (
             <Route path="/dashboard" element={<Navigate to="/my-requests" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-
             
-
             <Route path="/users" element={<UserManagement />} />
             <Route path="/zones" element={<Zones />} />
             <Route path="/all-requests" element={<AllRequests />} />
             <Route path="/audit-logs" element={<AuditLogs />} />
             <Route path="/settings" element={<Settings />} />
-
             <Route path="/my-requests" element={<MyRequests />} />
             <Route path="/create-request" element={<CreateRequest />} />
             <Route path="/edit-request/:id" element={<EditRequest />} />
-
             <Route path="/pending-approvals" element={<PendingApprovals />} />
             <Route path="/approval-history" element={<ApprovalHistory />} />
-
+            <Route path="/payment-notifications" element={<PaymentNotifications />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
