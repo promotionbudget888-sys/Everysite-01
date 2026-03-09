@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { UserProfile, getSavedProfile, saveProfile, saveToken, clearAuth } from '@/lib/auth';
 
-const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 นาที
+const TIMEOUT_USER  = 30 * 60 * 1000;       // 30 นาที (user ทั่วไป)
+const TIMEOUT_ADMIN = 9 * 60 * 60 * 1000;  // 9 ชั่วโมง (admin)
 const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
 
 interface AuthContextType {
@@ -27,16 +28,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetInactivityTimer = useCallback((currentProfile: UserProfile | null) => {
-    // เฉพาะ role ที่ไม่ใช่ admin เท่านั้นที่จะ timeout
-    if (!currentProfile || currentProfile.role === 'admin') return;
+    if (!currentProfile) return;
+
+    const timeout = currentProfile.role === 'admin' ? TIMEOUT_ADMIN : TIMEOUT_USER;
+    const msg = currentProfile.role === 'admin'
+      ? 'ระบบออกจากบัญชีอัตโนมัติเนื่องจากไม่มีการใช้งานเกิน 9 ชั่วโมง'
+      : 'ระบบออกจากบัญชีอัตโนมัติเนื่องจากไม่มีการใช้งานเกิน 30 นาที';
 
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     inactivityTimer.current = setTimeout(() => {
       clearAuth();
       setProfile(null);
-      // แจ้งเตือนผู้ใช้
-      alert('ระบบออกจากบัญชีอัตโนมัติเนื่องจากไม่มีการใช้งานเกิน 30 นาที');
-    }, INACTIVITY_TIMEOUT);
+      alert(msg);
+    }, timeout);
   }, []);
 
   // ติดตาม activity events
