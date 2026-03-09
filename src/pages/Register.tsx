@@ -30,6 +30,7 @@ export default function Register() {
   const [department, setDepartment] = useState('');
   const [branch, setBranch] = useState('');
   const [phone, setPhone] = useState('');
+  const [lineId, setLineId] = useState('');
   const [loading, setLoading] = useState(false);
   const [zones, setZones] = useState<ZoneOption[]>([]);
   const [zonesLoading, setZonesLoading] = useState(true);
@@ -107,6 +108,7 @@ export default function Register() {
         department: department.trim() || null,
         branch: branch.trim() || null,
         phone: phone.trim() || null,
+        line_id: lineId.trim() || null,
       });
 
       if (!res.success || res.data?.error) {
@@ -185,6 +187,11 @@ export default function Register() {
               <div className="space-y-2">
                 <Label htmlFor="phone">เบอร์โทรศัพท์ *</Label>
                 <Input id="phone" type="tel" placeholder="0812345678" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-11" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="line_id">LINE ID (ถ้ามี)</Label>
+                <Input id="line_id" type="text" placeholder="เช่น @mylineid" value={lineId} onChange={(e) => setLineId(e.target.value)} className="h-11" />
               </div>
 
               <div className="space-y-2">
