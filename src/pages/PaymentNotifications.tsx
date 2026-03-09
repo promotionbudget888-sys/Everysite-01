@@ -96,7 +96,7 @@ export default function PaymentNotifications() {
   const openSendDialog = (req: Request) => {
     setSelectedRequest(req);
     setCustomMessage(
-      `✅ แจ้งเตือนการจ่ายงบ\n\n📋 โครงการ: ${req.title}\n👤 ผู้จัดการฝ่าย: ${req.requester_name}\n💰 จำนวน: ${Number(req.amount).toLocaleString()} บาท\n📁 ประเภท: ${req.request_type === "everysite" ? "Everysite" : "Matching Fund"}${req.size ? ` (${req.size})` : ""}\n📅 อนุมัติจ่ายวันที่ (เปลี่ยนได้ตามใจชอบ)\n\nกรุณาตรวจสอบการโอนเงินด้วยครับ`
+      `✅ แจ้งเตือนการจ่ายงบส่งเสริม\n\n📋 โครงการ: ${req.title}\n👤 ผู้จัดการฝ่าย: ${req.requester_name}\n💰 จำนวน: ${Number(req.amount).toLocaleString()} บาท\n📁 ประเภท: ${req.request_type === "everysite" ? "Everysite" : "Matching Fund"}${req.size ? ` (${req.size})` : ""}\n📅 อนุมัติจ่ายวันที่ (เปลี่ยนได้ตามใจชอบ)\n\nกรุณาตรวจสอบการโอนเงินด้วยครับ`
     );
     setDialogOpen(true);
   };
