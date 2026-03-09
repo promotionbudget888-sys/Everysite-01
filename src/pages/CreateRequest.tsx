@@ -476,6 +476,9 @@ const CreateRequest = () => {
                     <p className="text-xs text-muted-foreground">กรอกข้อมูลให้ครบแล้วแนบไฟล์ด้านล่าง</p>
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={() => window.open(REQUEST_FORM_VIEW_URL, "_blank")}>ดูเอกสาร</Button>
+                  <Button type="button" variant="default" size="sm" onClick={() => window.open(REQUEST_FORM_VIEW_URL.replace("/view?usp=sharing", "/export?format=pdf"), "_blank")}>
+                    <Download className="h-3.5 w-3.5 mr-1" />ดาวน์โหลด
+                  </Button>
                 </div>
                 <div className="flex items-center justify-center w-full">
                   <label htmlFor="file-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
