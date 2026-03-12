@@ -234,34 +234,21 @@ export default function AllRequests() {
       setActionDialogOpen(false);
       fetchRequests();
 
-      // ✅ ส่ง LINE อัตโนมัติตอนกด "จ่าย"
+      // ✅ เปิด dialog แก้ข้อความ LINE ก่อนส่ง
       if (actionType === "set_paid" && selectedRequest) {
         try {
-          // หา line_id ของ requester
           const usersRes = await apiPost({ mode: "users" });
-          let lineUserId = "";
+          let uid = "";
           if (usersRes.success && Array.isArray(usersRes.data)) {
             const u = usersRes.data.find((u: { email?: string; line_id?: string }) =>
               u.email?.toLowerCase() === selectedRequest.requester_email?.toLowerCase()
             );
-            lineUserId = u?.line_id || "";
+            uid = u?.line_id || "";
           }
           const payDate = new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
-          const msg = `✅ แจ้งเตือนการจ่ายงบ
-
-📋 โครงการ: ${selectedRequest.title}
-👤 ผู้รับ: ${selectedRequest.requester_name}
-💰 จำนวน: ${Number(selectedRequest.amount).toLocaleString()} บาท
-📁 ประเภท: ${selectedRequest.request_type === "everysite" ? "Everysite" : "Matching Fund"}${selectedRequest.size ? ` (${selectedRequest.size})` : ""}
-📅 อนุมัติจ่ายวันที่: ${payDate}
-
-กรุณาตรวจสอบการโอนเงินด้วยครับ/ค่ะ`;
-          await apiPost({
-            mode: "notify_line",
-            type: "payment_notify",
-            message: msg,
-            line_user_id: lineUserId,
-          });
+          setLineUserId(uid);
+          setLineMessage(`✅ แจ้งเตือนการจ่ายงบ\n\n📋 โครงการ: ${selectedRequest.title}\n👤 ผู้รับ: ${selectedRequest.requester_name}\n💰 จำนวน: ${Number(selectedRequest.amount).toLocaleString()} บาท\n📁 ประเภท: ${selectedRequest.request_type === "everysite" ? "Everysite" : "Matching Fund"}${selectedRequest.size ? ` (${selectedRequest.size})` : ""}\n📅 อนุมัติจ่ายวันที่: ${payDate}\n\nกรุณาตรวจสอบการโอนเงินด้วยครับ/ค่ะ`);
+          setLineDialogOpen(true);
         } catch { /* ไม่ block flow หลัก */ }
       }
     }
