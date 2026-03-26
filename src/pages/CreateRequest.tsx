@@ -49,7 +49,6 @@ const formSchema = z.object({
 }, { message: "กรุณาเลือกไซส์สำหรับ Everysite", path: ["size"] })
 .refine((data) => {
   if (data.request_type === "everysite" && data.size === "S") {
-    // กรอกกี่ตัวก็ได้ แค่ต้องมีค่า
     const raw = (data.size_code || "").replace(/,/g, "");
     return raw.length > 0;
   }
@@ -191,7 +190,9 @@ const CreateRequest = () => {
         request_type: data.request_type,
         size: data.request_type === "everysite" ? data.size : null,
         size_code: sizeCode,
-        requester_id: Number(profile.id) || profile.id,
+        // ✅ ส่ง id เป็น string ตรงๆ ไม่แปลงเป็น Number
+        // เพราะหลัง migrate id จะเป็น UUID — Number("uuid") = NaN แล้วพัง
+        requester_id: String(profile.id),
         requester_name: profile.full_name,
         requester_email: profile.email,
         department: profile.department,
@@ -236,7 +237,6 @@ const CreateRequest = () => {
               zoneName,
               requestId,
             });
-            // ✅ เก็บ folderUrl จาก response แรก
             if (!uploadedDriveUrl && uploadRes?.data?.folderUrl) {
               uploadedDriveUrl = uploadRes.data.folderUrl;
             }
@@ -250,7 +250,7 @@ const CreateRequest = () => {
           }
         }
 
-        // ✅ ส่ง LINE แจ้งเตือนครั้งเดียว หลังอัปโหลดเสร็จ (มี drive_url ถ้าอัปโหลดสำเร็จ)
+        // ✅ ส่ง LINE แจ้งเตือนครั้งเดียว หลังอัปโหลดเสร็จ
         await apiPost({
           mode: "notify_line",
           type: "request_created",
@@ -301,7 +301,8 @@ const CreateRequest = () => {
               <h2 className="text-sm font-medium text-muted-foreground">งบประมาณ</h2>
               {budget.matching_fund.remaining > 0 && (
                 <BudgetTransferDialog
-                  profileId={Number(profile!.id) || profile!.id}
+                  // ✅ ส่ง id เป็น string ตรงๆ
+                  profileId={String(profile!.id)}
                   matchingFundRemaining={budget.matching_fund.remaining}
                   matchingFundTotal={budget.matching_fund.total}
                   everysiteTotal={budget.everysite.total}
@@ -415,7 +416,6 @@ const CreateRequest = () => {
               </CardContent>
             </Card>
 
-            {/* ✅ ช่องกรอกรหัสไซส์ S */}
             {selectedType === "everysite" && selectedSize === "S" && (
               <Card className="border-primary/50">
                 <CardHeader>
@@ -431,33 +431,29 @@ const CreateRequest = () => {
                   <FormField
                     control={form.control}
                     name="size_code"
-                    render={({ field }) => {
-                      // แสดงจำนวนรหัสที่กรอกแล้ว
-                      return (
-                        <FormItem>
-                          <FormLabel>รหัส *</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="เช่น A12121,121221,212121"
-                              value={field.value || ""}
-                              onChange={(e) => {
-                                let value = e.target.value;
-                                value = value.replace(/[^A-Za-z0-9]/g, "");
-                                value = value.toUpperCase();
-                                // ✅ ใส่ , ทุก 6 ตัวอัตโนมัติ กรอกกี่ตัวก็ได้
-                                const chunks = value.match(/.{1,6}/g);
-                                const formatted = chunks ? chunks.join(",") : "";
-                                field.onChange(formatted);
-                              }}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            กรอกตัวอักษรหรือตัวเลขได้ไม่จำกัด ระบบจะใส่ , ให้อัตโนมัติทุก 6 ตัว
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>รหัส *</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="เช่น A12121,121221,212121"
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              let value = e.target.value;
+                              value = value.replace(/[^A-Za-z0-9]/g, "");
+                              value = value.toUpperCase();
+                              const chunks = value.match(/.{1,6}/g);
+                              const formatted = chunks ? chunks.join(",") : "";
+                              field.onChange(formatted);
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          กรอกตัวอักษรหรือตัวเลขได้ไม่จำกัด ระบบจะใส่ , ให้อัตโนมัติทุก 6 ตัว
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </CardContent>
               </Card>
