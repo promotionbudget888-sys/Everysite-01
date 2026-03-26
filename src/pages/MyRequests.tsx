@@ -31,22 +31,22 @@ import { getStatusConfig } from "@/lib/statusUtils";
 interface Request {
   id: string;
   title: string;
-  description: string | null;
+  description?: string | null;
   amount: number;
   status: string;
   zone_id: string;
-  admin_notes: string | null;
-  zone_approver_notes: string | null;
-  final_notes: string | null;
-  rejected_reason: string | null;
-  request_type: string | null;
-  size: string | null;
-  size_code: string | null;
-  department: string | null;
-  branch: string | null;
-  affiliation: string | null;
+  requester_id: string;           // ← สำคัญมาก
+  request_type?: string | null;
+  size?: string | null;
+  size_code?: string | null;
+  department?: string | null;
+  branch?: string | null;
+  affiliation?: string | null;
+  admin_notes?: string | null;
+  zone_approver_notes?: string | null;
+  final_notes?: string | null;
+  rejected_reason?: string | null;
   created_at: string;
-  updated_at?: string;
 }
 
 function DriveButton({ requestId }: { requestId: string }) {
@@ -66,8 +66,9 @@ function DriveButton({ requestId }: { requestId: string }) {
     try {
       const res = await apiPost({ mode: "get_drive_url", id: requestId });
       if (res.success && res.data?.drive_url) {
-        setUrl(res.data.drive_url);
-        window.open(res.data.drive_url, "_blank");
+        const driveUrl = res.data.drive_url;
+        setUrl(driveUrl);
+        window.open(driveUrl, "_blank");
       } else {
         setError(true);
       }
@@ -81,14 +82,30 @@ function DriveButton({ requestId }: { requestId: string }) {
 
   return (
     <div>
-      <Button variant="outline" className="w-full gap-2" onClick={handleOpen} disabled={loading}>
+      <Button 
+        variant="outline" 
+        className="w-full gap-2" 
+        onClick={handleOpen} 
+        disabled={loading}
+      >
         {loading ? (
-          <><Loader2 className="h-4 w-4 animate-spin" />กำลังโหลด...</>
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            กำลังโหลด...
+          </>
         ) : (
-          <><FolderOpen className="h-4 w-4" />ดูเอกสารใน Google Drive<ExternalLink className="h-3.5 w-3.5 ml-auto" /></>
+          <>
+            <FolderOpen className="h-4 w-4" />
+            ดูเอกสารใน Google Drive
+            <ExternalLink className="h-3.5 w-3.5 ml-auto" />
+          </>
         )}
       </Button>
-      {error && <p className="text-xs text-destructive mt-1.5 text-center">ไม่พบโฟลเดอร์เอกสาร</p>}
+      {error && (
+        <p className="text-xs text-destructive mt-1.5 text-center">
+          ไม่พบโฟลเดอร์เอกสาร
+        </p>
+      )}
     </div>
   );
 }
@@ -110,13 +127,13 @@ const MyRequests = () => {
   const [requestToDelete, setRequestToDelete] = useState<Request | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ดึงข้อมูลเมื่อ profile เปลี่ยน
+  // ดึงข้อมูลเมื่อ profile พร้อม
   useEffect(() => {
     if (profile?.id) {
-      console.log("🔄 โหลดคำขอของผู้ใช้:", profile.id, "ชื่อ:", profile.full_name);
+      console.log("🔄 โหลดคำขอของผู้ใช้ ID:", profile.id);
       fetchRequests();
     }
-  }, [profile]);
+  }, [profile?.id]);
 
   const fetchRequests = async () => {
     if (!profile?.id) {
@@ -125,33 +142,33 @@ const MyRequests = () => {
     }
 
     setLoading(true);
-    console.log("📤 ส่งคำขอไป server ด้วย requester_id:", String(profile.id));
+    console.log("📤 กำลังเรียก list requests ด้วย requester_id =", String(profile.id));
 
     try {
       const res = await apiPost({
-        mode: "list",
-        requester_id: String(profile.id),   // สำคัญ: ส่งเป็น string
+        mode: "list",                    // หรือ "list_requests" ถ้าคุณเปลี่ยนแล้ว
+        requester_id: String(profile.id),   // ต้องเป็น String
       });
 
       console.log("📥 Response จาก Apps Script:", res);
 
       if (res.success && Array.isArray(res.data)) {
-        const sorted = res.data.sort((a: Request, b: Request) => 
+        const sorted = [...res.data].sort((a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
         setRequests(sorted);
         console.log(`✅ โหลดสำเร็จ ${sorted.length} รายการ`);
       } else {
-        console.warn("⚠️ Server ตอบไม่สำเร็จหรือไม่มีข้อมูล:", res);
+        console.warn("⚠️ Server ตอบไม่สำเร็จ:", res);
         toast({
           title: "ไม่พบรายการคำขอ",
-          description: res.error || "ไม่มีคำขอในขณะนี้",
-          variant: "destructive",
+          description: res.error || "คุณยังไม่มีคำขอใดๆ",
+          variant: "default",
         });
         setRequests([]);
       }
-    } catch (error) {
-      console.error("❌ Error ในการโหลดคำขอ:", error);
+    } catch (error: any) {
+      console.error("❌ Error โหลดคำขอ:", error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถโหลดรายการคำขอได้ กรุณาลองใหม่อีกครั้ง",
@@ -187,9 +204,7 @@ const MyRequests = () => {
 
   const stats = {
     total: requests.length,
-    pending: requests.filter((r) =>
-      ["submitted", "zone_review_1", "zone_review_2", "admin_finalize"].includes(r.status)
-    ).length,
+    pending: requests.filter((r) => ["submitted", "zone_review_1", "zone_review_2", "admin_finalize"].includes(r.status)).length,
     approved: requests.filter((r) => ["approved", "competing", "paid"].includes(r.status)).length,
     rejected: requests.filter((r) => r.status === "rejected").length,
     returned: requests.filter((r) => r.status === "returned").length,
@@ -208,14 +223,18 @@ const MyRequests = () => {
 
     try {
       const res = await apiPost({ mode: "delete", id: requestToDelete.id });
-      if (!res.success) throw new Error(res.error || "ไม่สามารถลบได้");
+      if (!res.success) throw new Error(res.error || "ลบไม่สำเร็จ");
 
-      toast({ title: "ลบคำขอสำเร็จ" });
+      toast({ title: "ลบคำขอสำเร็จแล้ว" });
       setDeleteDialogOpen(false);
       setRequestToDelete(null);
-      fetchRequests();
+      fetchRequests(); // รีเฟรชข้อมูล
     } catch (error) {
-      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถลบคำขอได้", variant: "destructive" });
+      toast({
+        title: "ลบไม่สำเร็จ",
+        description: "เกิดข้อผิดพลาดในการลบคำขอ",
+        variant: "destructive",
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -226,7 +245,6 @@ const MyRequests = () => {
       style: "currency",
       currency: "THB",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
     }).format(Math.round(amount));
 
   const fmtDate = (dateStr: string) => {
@@ -267,10 +285,10 @@ const MyRequests = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
             { label: "ทั้งหมด", value: stats.total },
-            { label: "รอดำเนินการ", value: stats.pending, color: "text-warning" },
-            { label: "อนุมัติแล้ว", value: stats.approved, color: "text-success" },
-            { label: "ปฏิเสธ", value: stats.rejected, color: "text-destructive" },
-            { label: "ตีกลับ", value: stats.returned, color: "text-orange-500" },
+            { label: "รอดำเนินการ", value: stats.pending, color: "text-amber-600" },
+            { label: "อนุมัติแล้ว", value: stats.approved, color: "text-emerald-600" },
+            { label: "ปฏิเสธ", value: stats.rejected, color: "text-red-600" },
+            { label: "ตีกลับ", value: stats.returned, color: "text-orange-600" },
           ].map((s) => (
             <Card key={s.label}>
               <CardHeader className="pb-2">
@@ -297,24 +315,24 @@ const MyRequests = () => {
                 />
               </div>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-full sm:w-48">
+                <SelectTrigger className="w-full sm:w-52">
                   <SelectValue placeholder="ทุกสถานะ" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">ทุกสถานะ</SelectItem>
                   <SelectItem value="submitted">รอตรวจสอบ</SelectItem>
-                  <SelectItem value="zone_review_1">รอ L1</SelectItem>
-                  <SelectItem value="zone_review_2">รอ L2</SelectItem>
+                  <SelectItem value="zone_review_1">รอผู้อนุมัติ Level 1</SelectItem>
+                  <SelectItem value="zone_review_2">รอผู้อนุมัติ Level 2</SelectItem>
                   <SelectItem value="admin_finalize">รออนุมัติขั้นสุดท้าย</SelectItem>
                   <SelectItem value="approved">อนุมัติแข่งขัน</SelectItem>
-                  <SelectItem value="competing">แข่งขัน</SelectItem>
-                  <SelectItem value="paid">อนุมัติจ่าย</SelectItem>
+                  <SelectItem value="competing">อยู่ระหว่างแข่งขัน</SelectItem>
+                  <SelectItem value="paid">อนุมัติจ่ายแล้ว</SelectItem>
                   <SelectItem value="rejected">ปฏิเสธ</SelectItem>
                   <SelectItem value="returned">ตีกลับ</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" onClick={() => { setSearchTerm(""); setFilterStatus("all"); }}>
-                ล้าง
+                ล้างตัวกรอง
               </Button>
             </div>
           </CardContent>
@@ -371,9 +389,14 @@ const MyRequests = () => {
                             <Button size="sm" variant="outline" onClick={() => openViewDialog(req)}>
                               <Eye className="h-4 w-4" />
                             </Button>
+
                             {canEditOrDelete(req.status, req.created_at) && (
                               <>
-                                <Button size="sm" variant="outline" onClick={() => navigate(`/edit-request/${req.id}`)}>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => navigate(`/edit-request/${req.id}`)}
+                                >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                                 <Button
@@ -439,7 +462,9 @@ const MyRequests = () => {
               {selectedRequest.description && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">รายละเอียด</p>
-                  <p className="bg-muted p-3 rounded-md whitespace-pre-wrap">{selectedRequest.description}</p>
+                  <p className="bg-muted p-3 rounded-md whitespace-pre-wrap">
+                    {selectedRequest.description}
+                  </p>
                 </div>
               )}
 
@@ -450,24 +475,26 @@ const MyRequests = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>ปิด</Button>
+            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+              ปิด
+            </Button>
             {selectedRequest && canEditOrDelete(selectedRequest.status, selectedRequest.created_at) && (
               <Button onClick={() => navigate(`/edit-request/${selectedRequest.id}`)}>
-                <Pencil className="h-4 w-4 mr-2" /> แก้ไข
+                <Pencil className="h-4 w-4 mr-2" /> แก้ไขคำขอ
               </Button>
             )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog ยืนยันลบ */}
+      {/* AlertDialog ลบ */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>ยืนยันการลบคำขอ</AlertDialogTitle>
             <AlertDialogDescription>
-              คุณต้องการลบคำขอ "<strong>{requestToDelete?.title}</strong>" ใช่หรือไม่?<br />
-              การกระทำนี้ไม่สามารถย้อนกลับได้
+              คุณต้องการลบคำขอ "<strong>{requestToDelete?.title}</strong>" จริงหรือไม่?<br />
+              การกระทำนี้ไม่สามารถยกเลิกได้
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -475,9 +502,9 @@ const MyRequests = () => {
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive hover:bg-destructive/90"
             >
-              {isDeleting ? "กำลังลบ..." : "ลบคำขอ"}
+              {isDeleting ? "กำลังลบ..." : "ยืนยันการลบ"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
