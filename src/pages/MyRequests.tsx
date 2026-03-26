@@ -35,7 +35,7 @@ interface Request {
   amount: number;
   status: string;
   zone_id: string;
-  requester_id: string;           // ← สำคัญมาก
+  requester_id: string;
   request_type?: string | null;
   size?: string | null;
   size_code?: string | null;
@@ -49,26 +49,24 @@ interface Request {
   created_at: string;
 }
 
+// ─────────────────────────────────────────────
+// ปุ่มเปิด Google Drive
+// ─────────────────────────────────────────────
 function DriveButton({ requestId }: { requestId: string }) {
   const [loading, setLoading] = useState(false);
-  const [url, setUrl] = useState<string | null>(null);
-  const [error, setError] = useState(false);
+  const [url,     setUrl]     = useState<string | null>(null);
+  const [error,   setError]   = useState(false);
 
   const handleOpen = async () => {
-    if (url) {
-      window.open(url, "_blank");
-      return;
-    }
+    if (url) { window.open(url, "_blank"); return; }
 
     setLoading(true);
     setError(false);
-
     try {
-      const res = await apiPost({ mode: "get_drive_url", id: requestId });
+      const res = await apiPost({ action: "get_drive_url", id: requestId });
       if (res.success && res.data?.drive_url) {
-        const driveUrl = res.data.drive_url;
-        setUrl(driveUrl);
-        window.open(driveUrl, "_blank");
+        setUrl(res.data.drive_url);
+        window.open(res.data.drive_url, "_blank");
       } else {
         setError(true);
       }
@@ -82,132 +80,98 @@ function DriveButton({ requestId }: { requestId: string }) {
 
   return (
     <div>
-      <Button 
-        variant="outline" 
-        className="w-full gap-2" 
-        onClick={handleOpen} 
-        disabled={loading}
-      >
+      <Button variant="outline" className="w-full gap-2" onClick={handleOpen} disabled={loading}>
         {loading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            กำลังโหลด...
-          </>
+          <><Loader2 className="h-4 w-4 animate-spin" />กำลังโหลด...</>
         ) : (
-          <>
-            <FolderOpen className="h-4 w-4" />
-            ดูเอกสารใน Google Drive
-            <ExternalLink className="h-3.5 w-3.5 ml-auto" />
-          </>
+          <><FolderOpen className="h-4 w-4" />ดูเอกสารใน Google Drive<ExternalLink className="h-3.5 w-3.5 ml-auto" /></>
         )}
       </Button>
       {error && (
-        <p className="text-xs text-destructive mt-1.5 text-center">
-          ไม่พบโฟลเดอร์เอกสาร
-        </p>
+        <p className="text-xs text-destructive mt-1.5 text-center">ไม่พบโฟลเดอร์เอกสาร</p>
       )}
     </div>
   );
 }
 
+// ─────────────────────────────────────────────
+// MyRequests Page
+// ─────────────────────────────────────────────
 const MyRequests = () => {
   const { profile } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const { toast }   = useToast();
+  const navigate    = useNavigate();
 
-  const [requests, setRequests] = useState<Request[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [requests,        setRequests]        = useState<Request[]>([]);
+  const [loading,         setLoading]         = useState(true);
+  const [searchTerm,      setSearchTerm]      = useState("");
+  const [filterStatus,    setFilterStatus]    = useState<string>("all");
 
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewDialogOpen,  setViewDialogOpen]  = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [requestToDelete, setRequestToDelete] = useState<Request | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen,  setDeleteDialogOpen]  = useState(false);
+  const [requestToDelete,   setRequestToDelete]   = useState<Request | null>(null);
+  const [isDeleting,        setIsDeleting]         = useState(false);
 
-  // ดึงข้อมูลเมื่อ profile พร้อม
+  // ★ โหลดเมื่อ profile.id พร้อม
   useEffect(() => {
     if (profile?.id) {
-      console.log("🔄 โหลดคำขอของผู้ใช้ ID:", profile.id);
       fetchRequests();
     }
   }, [profile?.id]);
 
+  // ★ ฟังก์ชันโหลดคำขอ — ส่ง action แทน mode เพื่อให้ตรงกับ backend 100%
   const fetchRequests = async () => {
-    if (!profile?.id) {
-      setLoading(false);
-      return;
-    }
+    if (!profile?.id) { setLoading(false); return; }
 
     setLoading(true);
-    console.log("📤 กำลังเรียก list requests ด้วย requester_id =", String(profile.id));
+
+    // normalize: แปลงเป็น string แล้ว trim เสมอ (ป้องกัน whitespace / number type)
+    const requesterId = String(profile.id).trim();
+
+    console.log("📤 fetchRequests | requester_id =", requesterId);
 
     try {
       const res = await apiPost({
-        mode: "list",                    // หรือ "list_requests" ถ้าคุณเปลี่ยนแล้ว
-        requester_id: String(profile.id),   // ต้องเป็น String
+        action:       "list",        // ★ ใช้ action แทน mode
+        requester_id: requesterId,
       });
 
-      console.log("📥 Response จาก Apps Script:", res);
+      console.log("📥 response:", res);
 
       if (res.success && Array.isArray(res.data)) {
-        const sorted = [...res.data].sort((a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        const sorted = [...res.data].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
         setRequests(sorted);
         console.log(`✅ โหลดสำเร็จ ${sorted.length} รายการ`);
       } else {
-        console.warn("⚠️ Server ตอบไม่สำเร็จ:", res);
-        toast({
-          title: "ไม่พบรายการคำขอ",
-          description: res.error || "คุณยังไม่มีคำขอใดๆ",
-          variant: "default",
-        });
+        console.warn("⚠️ ไม่มีข้อมูล:", res.error);
         setRequests([]);
+        if (res.error) {
+          toast({ title: "เกิดข้อผิดพลาด", description: res.error, variant: "destructive" });
+        }
       }
-    } catch (error: any) {
-      console.error("❌ Error โหลดคำขอ:", error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถโหลดรายการคำขอได้ กรุณาลองใหม่อีกครั้ง",
-        variant: "destructive",
-      });
+    } catch (err: any) {
+      console.error("❌ fetchRequests error:", err);
+      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถโหลดข้อมูลได้", variant: "destructive" });
       setRequests([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const openViewDialog = (req: Request) => {
-    setSelectedRequest(req);
-    setViewDialogOpen(true);
-  };
-
+  // ─── helpers ───────────────────────────────
   const getStatusBadge = (status: string) => {
     const config = getStatusConfig(status);
-    const Icon = config.icon;
+    const Icon   = config.icon;
     return (
       <Badge variant="outline" className={config.color}>
         <Icon className="h-3 w-3 mr-1" />
         {config.label}
       </Badge>
     );
-  };
-
-  const filteredRequests = requests.filter((req) => {
-    const matchesSearch = req.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "all" || req.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  const stats = {
-    total: requests.length,
-    pending: requests.filter((r) => ["submitted", "zone_review_1", "zone_review_2", "admin_finalize"].includes(r.status)).length,
-    approved: requests.filter((r) => ["approved", "competing", "paid"].includes(r.status)).length,
-    rejected: requests.filter((r) => r.status === "rejected").length,
-    returned: requests.filter((r) => r.status === "returned").length,
   };
 
   const EDIT_WINDOW_MS = 30 * 60 * 1000; // 30 นาที
@@ -217,34 +181,9 @@ const MyRequests = () => {
     return Date.now() - new Date(createdAt).getTime() <= EDIT_WINDOW_MS;
   };
 
-  const handleDelete = async () => {
-    if (!requestToDelete) return;
-    setIsDeleting(true);
-
-    try {
-      const res = await apiPost({ mode: "delete", id: requestToDelete.id });
-      if (!res.success) throw new Error(res.error || "ลบไม่สำเร็จ");
-
-      toast({ title: "ลบคำขอสำเร็จแล้ว" });
-      setDeleteDialogOpen(false);
-      setRequestToDelete(null);
-      fetchRequests(); // รีเฟรชข้อมูล
-    } catch (error) {
-      toast({
-        title: "ลบไม่สำเร็จ",
-        description: "เกิดข้อผิดพลาดในการลบคำขอ",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   const fmt = (amount: number) =>
     new Intl.NumberFormat("th-TH", {
-      style: "currency",
-      currency: "THB",
-      minimumFractionDigits: 0,
+      style: "currency", currency: "THB", minimumFractionDigits: 0,
     }).format(Math.round(amount));
 
   const fmtDate = (dateStr: string) => {
@@ -252,14 +191,49 @@ const MyRequests = () => {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr || "-";
       return format(d, "d MMM yyyy HH:mm", { locale: th });
+    } catch { return dateStr || "-"; }
+  };
+
+  // ─── delete ────────────────────────────────
+  const handleDelete = async () => {
+    if (!requestToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await apiPost({ action: "delete", id: requestToDelete.id });
+      if (!res.success) throw new Error(res.error || "ลบไม่สำเร็จ");
+      toast({ title: "ลบคำขอสำเร็จแล้ว" });
+      setDeleteDialogOpen(false);
+      setRequestToDelete(null);
+      fetchRequests();
     } catch {
-      return dateStr || "-";
+      toast({ title: "ลบไม่สำเร็จ", description: "เกิดข้อผิดพลาดในการลบคำขอ", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
+  // ─── filtered list ─────────────────────────
+  const filteredRequests = requests.filter((req) => {
+    const matchesSearch = req.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === "all" || req.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  const stats = {
+    total:    requests.length,
+    pending:  requests.filter((r) => ["submitted","zone_review_1","zone_review_2","admin_finalize"].includes(r.status)).length,
+    approved: requests.filter((r) => ["approved","competing","paid"].includes(r.status)).length,
+    rejected: requests.filter((r) => r.status === "rejected").length,
+    returned: requests.filter((r) => r.status === "returned").length,
+  };
+
+  // ─────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────
   return (
     <AppLayout>
       <section className="space-y-6">
+
         {/* Header */}
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -281,14 +255,14 @@ const MyRequests = () => {
           </div>
         </header>
 
-        {/* Stats Cards */}
+        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
-            { label: "ทั้งหมด", value: stats.total },
-            { label: "รอดำเนินการ", value: stats.pending, color: "text-amber-600" },
+            { label: "ทั้งหมด",     value: stats.total },
+            { label: "รอดำเนินการ", value: stats.pending,  color: "text-amber-600"  },
             { label: "อนุมัติแล้ว", value: stats.approved, color: "text-emerald-600" },
-            { label: "ปฏิเสธ", value: stats.rejected, color: "text-red-600" },
-            { label: "ตีกลับ", value: stats.returned, color: "text-orange-600" },
+            { label: "ปฏิเสธ",      value: stats.rejected, color: "text-red-600"    },
+            { label: "ตีกลับ",      value: stats.returned, color: "text-orange-600" },
           ].map((s) => (
             <Card key={s.label}>
               <CardHeader className="pb-2">
@@ -361,13 +335,13 @@ const MyRequests = () => {
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-12">
                         <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-                        <p className="mt-2">กำลังโหลดข้อมูล...</p>
+                        <p className="mt-2 text-muted-foreground">กำลังโหลดข้อมูล...</p>
                       </TableCell>
                     </TableRow>
                   ) : filteredRequests.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                        ไม่พบรายการคำขอ
+                        {requests.length === 0 ? "คุณยังไม่มีคำขอใดๆ" : "ไม่พบรายการที่ตรงกับเงื่อนไข"}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -386,27 +360,16 @@ const MyRequests = () => {
                         <TableCell>{getStatusBadge(req.status)}</TableCell>
                         <TableCell className="text-right pr-4">
                           <div className="flex justify-end gap-1">
-                            <Button size="sm" variant="outline" onClick={() => openViewDialog(req)}>
+                            <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(req); setViewDialogOpen(true); }}>
                               <Eye className="h-4 w-4" />
                             </Button>
-
                             {canEditOrDelete(req.status, req.created_at) && (
                               <>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  onClick={() => navigate(`/edit-request/${req.id}`)}
-                                >
+                                <Button size="sm" variant="outline" onClick={() => navigate(`/edit-request/${req.id}`)}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setRequestToDelete(req);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                >
+                                <Button size="sm" variant="outline"
+                                  onClick={() => { setRequestToDelete(req); setDeleteDialogOpen(true); }}>
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </>
@@ -462,8 +425,40 @@ const MyRequests = () => {
               {selectedRequest.description && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">รายละเอียด</p>
-                  <p className="bg-muted p-3 rounded-md whitespace-pre-wrap">
-                    {selectedRequest.description}
+                  <p className="bg-muted p-3 rounded-md whitespace-pre-wrap">{selectedRequest.description}</p>
+                </div>
+              )}
+
+              {/* หมายเหตุจากผู้ดูแล */}
+              {(selectedRequest.admin_notes || selectedRequest.zone_approver_notes || selectedRequest.final_notes) && (
+                <div className="border-t pt-4 space-y-2">
+                  {selectedRequest.zone_approver_notes && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">หมายเหตุผู้อนุมัติโซน</p>
+                      <p className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-md text-xs">{selectedRequest.zone_approver_notes}</p>
+                    </div>
+                  )}
+                  {selectedRequest.admin_notes && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">หมายเหตุแอดมิน</p>
+                      <p className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-md text-xs">{selectedRequest.admin_notes}</p>
+                    </div>
+                  )}
+                  {selectedRequest.final_notes && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">หมายเหตุสุดท้าย</p>
+                      <p className="bg-muted p-3 rounded-md text-xs">{selectedRequest.final_notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* เหตุผลปฏิเสธ */}
+              {selectedRequest.rejected_reason && (
+                <div className="border-t pt-4">
+                  <p className="text-xs text-muted-foreground mb-1">เหตุผลที่ปฏิเสธ</p>
+                  <p className="bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 p-3 rounded-md text-xs">
+                    {selectedRequest.rejected_reason}
                   </p>
                 </div>
               )}
@@ -475,9 +470,7 @@ const MyRequests = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
-              ปิด
-            </Button>
+            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>ปิด</Button>
             {selectedRequest && canEditOrDelete(selectedRequest.status, selectedRequest.created_at) && (
               <Button onClick={() => navigate(`/edit-request/${selectedRequest.id}`)}>
                 <Pencil className="h-4 w-4 mr-2" /> แก้ไขคำขอ
@@ -493,7 +486,7 @@ const MyRequests = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>ยืนยันการลบคำขอ</AlertDialogTitle>
             <AlertDialogDescription>
-              คุณต้องการลบคำขอ "<strong>{requestToDelete?.title}</strong>" จริงหรือไม่?<br />
+              คุณต้องการลบคำขอ "<strong>{requestToDelete?.title}</strong>" จริงหรือไม่?{" "}
               การกระทำนี้ไม่สามารถยกเลิกได้
             </AlertDialogDescription>
           </AlertDialogHeader>
