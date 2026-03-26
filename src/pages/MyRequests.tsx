@@ -55,7 +55,6 @@ interface DriveFile {
   fileUrl: string;
 }
 
-
 // ✅ Component ดึง Drive URL จาก GAS แล้วเปิด
 function DriveButton({ requestId }: { requestId: string }) {
   const [loading, setLoading] = useState(false);
@@ -117,7 +116,9 @@ const MyRequests = () => {
     setLoading(true);
     const res = await apiPost({
       mode: "list",
-      requester_id: Number(profile.id) || profile.id,
+      // ✅ ส่ง id เป็น string ตรงๆ ไม่แปลงเป็น Number
+      // เพราะ id อาจเป็น UUID (string) หลัง migrate
+      requester_id: String(profile.id),
     });
     if (res.success && Array.isArray(res.data)) {
       const sorted = res.data.sort(
@@ -198,14 +199,6 @@ const MyRequests = () => {
       if (isNaN(d.getTime())) return dateStr || "-";
       return format(d, "d MMM yyyy HH:mm", { locale: th });
     } catch { return dateStr || "-"; }
-  };
-
-  // Drive folder URL สำหรับ request (เปิด folder ตรงๆ)
-  const getDriveFolderUrl = (req: Request) => {
-    const shortId = req.id.substring(0, 8);
-    const zoneName = profile?.zone_id ? `โซน ${profile.zone_id}` : "general";
-    // ลิงค์ไปที่ root drive folder ก่อน (user ค้นหาเองใน folder)
-    return `https://drive.google.com/drive/folders/18Witb2KHeSI3BFNrrUKfEDsaP8XfMAas`;
   };
 
   return (
