@@ -55,16 +55,21 @@ interface DriveFile {
   fileUrl: string;
 }
 
-// ✅ Component ดึง Drive URL จาก GAS แล้วเปิด
+// ปุ่มเปิดเอกสารใน Google Drive
 function DriveButton({ requestId }: { requestId: string }) {
   const [loading, setLoading] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
   const handleOpen = async () => {
-    if (url) { window.open(url, "_blank"); return; }
+    if (url) {
+      window.open(url, "_blank");
+      return;
+    }
+
     setLoading(true);
     setError(false);
+
     try {
       const res = await apiPost({ mode: "get_drive_url", id: requestId });
       if (res.success && res.data?.drive_url) {
@@ -73,7 +78,8 @@ function DriveButton({ requestId }: { requestId: string }) {
       } else {
         setError(true);
       }
-    } catch {
+    } catch (err) {
+      console.error("Drive URL error:", err);
       setError(true);
     } finally {
       setLoading(false);
@@ -83,10 +89,11 @@ function DriveButton({ requestId }: { requestId: string }) {
   return (
     <div>
       <Button variant="outline" className="w-full gap-2" onClick={handleOpen} disabled={loading}>
-        {loading
-          ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังโหลด...</>
-          : <><FolderOpen className="h-4 w-4" />ดูเอกสารใน Google Drive<ExternalLink className="h-3.5 w-3.5 ml-auto" /></>
-        }
+        {loading ? (
+          <><Loader2 className="h-4 w-4 animate-spin" />กำลังโหลด...</>
+        ) : (
+          <><FolderOpen className="h-4 w-4" />ดูเอกสารใน Google Drive<ExternalLink className="h-3.5 w-3.5 ml-auto" /></>
+        )}
       </Button>
       {error && <p className="text-xs text-destructive mt-1.5 text-center">ไม่พบโฟลเดอร์เอกสาร</p>}
     </div>
@@ -105,32 +112,61 @@ const MyRequests = () => {
 
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<Request | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => { if (profile) fetchRequests(); }, [profile]);
+  // ดึงข้อมูลเมื่อ profile พร้อม
+  useEffect(() => {
+    if (profile?.id) {
+      console.log("🔄 โหลดข้อมูลคำขอสำหรับ user:", profile.id);
+      fetchRequests();
+    }
+  }, [profile]);
 
   const fetchRequests = async () => {
-    if (!profile) return;
-    setLoading(true);
-    const res = await apiPost({
-      mode: "list",
-      // ✅ ส่ง id เป็น string ตรงๆ ไม่แปลงเป็น Number
-      // เพราะ id อาจเป็น UUID (string) หลัง migrate
-      requester_id: String(profile.id),
-    });
-    if (res.success && Array.isArray(res.data)) {
-      const sorted = res.data.sort(
-        (a: Request, b: Request) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      setRequests(sorted);
-    } else {
-      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถโหลดข้อมูลคำขอได้", variant: "destructive" });
-      setRequests([]);
+    if (!profile?.id) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    setLoading(true);
+
+    try {
+      const res = await apiPost({
+        mode: "list",
+        requester_id: String(profile.id),   // ส่งเป็น string เสมอ
+      });
+
+      console.log("📥 Response จาก server (list):", res);
+
+      if (res.success && Array.isArray(res.data)) {
+        const sorted = res.data.sort((a: Request, b: Request) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setRequests(sorted);
+        console.log(`✅ โหลดสำเร็จ ${sorted.length} รายการ`);
+      } else {
+        console.warn("⚠️ Server ส่งข้อมูลไม่ถูกต้อง:", res);
+        toast({
+          title: "ไม่พบข้อมูล",
+          description: res.error || "ไม่สามารถโหลดรายการคำขอได้ในขณะนี้",
+          variant: "destructive",
+        });
+        setRequests([]);
+      }
+    } catch (error) {
+      console.error("❌ Error fetchRequests:", error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถเชื่อมต่อกับระบบได้ กรุณาลองใหม่อีกครั้ง",
+        variant: "destructive",
+      });
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openViewDialog = (req: Request) => {
@@ -143,7 +179,8 @@ const MyRequests = () => {
     const Icon = config.icon;
     return (
       <Badge variant="outline" className={config.color}>
-        <Icon className="h-3 w-3 mr-1" />{config.label}
+        <Icon className="h-3 w-3 mr-1" />
+        {config.label}
       </Badge>
     );
   };
@@ -164,7 +201,8 @@ const MyRequests = () => {
     returned: requests.filter((r) => r.status === "returned").length,
   };
 
-  const EDIT_WINDOW_MS = 30 * 60 * 1000;
+  const EDIT_WINDOW_MS = 30 * 60 * 1000; // 30 นาที
+
   const canEditOrDelete = (status: string, createdAt: string) => {
     if (!["draft", "returned", "submitted"].includes(status)) return false;
     return Date.now() - new Date(createdAt).getTime() <= EDIT_WINDOW_MS;
@@ -173,15 +211,17 @@ const MyRequests = () => {
   const handleDelete = async () => {
     if (!requestToDelete) return;
     setIsDeleting(true);
+
     try {
       const res = await apiPost({ mode: "delete", id: requestToDelete.id });
-      if (!res.success) throw new Error(res.error);
+      if (!res.success) throw new Error(res.error || "ไม่สามารถลบได้");
+
       toast({ title: "ลบคำขอสำเร็จ" });
       setDeleteDialogOpen(false);
       setRequestToDelete(null);
-      fetchRequests();
-    } catch {
-      toast({ title: "เกิดข้อผิดพลาด", variant: "destructive" });
+      fetchRequests(); // รีเฟรชข้อมูล
+    } catch (error) {
+      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถลบคำขอได้", variant: "destructive" });
     } finally {
       setIsDeleting(false);
     }
@@ -189,8 +229,10 @@ const MyRequests = () => {
 
   const fmt = (amount: number) =>
     new Intl.NumberFormat("th-TH", {
-      style: "currency", currency: "THB",
-      minimumFractionDigits: 0, maximumFractionDigits: 0,
+      style: "currency",
+      currency: "THB",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(Math.round(amount));
 
   const fmtDate = (dateStr: string) => {
@@ -198,28 +240,30 @@ const MyRequests = () => {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr || "-";
       return format(d, "d MMM yyyy HH:mm", { locale: th });
-    } catch { return dateStr || "-"; }
+    } catch {
+      return dateStr || "-";
+    }
   };
 
   return (
     <AppLayout>
       <section className="space-y-6">
-
         {/* HEADER */}
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <FileText className="h-6 w-6" />คำขอของฉัน
+              <FileText className="h-6 w-6" /> คำขอของฉัน
             </h1>
             <p className="text-muted-foreground">ดูและติดตามสถานะคำขอใช้งบประมาณของคุณ</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={fetchRequests} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />รีเฟรช
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              รีเฟรช
             </Button>
             <Button asChild>
               <Link to="/create-request">
-                <Plus className="h-4 w-4 mr-2" />สร้างคำขอใหม่
+                <Plus className="h-4 w-4 mr-2" /> สร้างคำขอใหม่
               </Link>
             </Button>
           </div>
@@ -235,8 +279,12 @@ const MyRequests = () => {
             { label: "ตีกลับ", value: stats.returned, color: "text-orange-500" },
           ].map((s) => (
             <Card key={s.label}>
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{s.label}</CardTitle></CardHeader>
-              <CardContent><div className={`text-2xl font-bold ${s.color}`}>{s.value}</div></CardContent>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">{s.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -271,14 +319,18 @@ const MyRequests = () => {
                   <SelectItem value="returned">ตีกลับ</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" onClick={() => { setSearchTerm(""); setFilterStatus("all"); }}>ล้าง</Button>
+              <Button variant="outline" onClick={() => { setSearchTerm(""); setFilterStatus("all"); }}>
+                ล้าง
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         {/* TABLE */}
         <Card>
-          <CardHeader><CardTitle>รายการคำขอ ({filteredRequests.length})</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>รายการคำขอ ({filteredRequests.length})</CardTitle>
+          </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
@@ -295,49 +347,60 @@ const MyRequests = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10">
-                        <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mx-auto" />
+                      <TableCell colSpan={6} className="text-center py-12">
+                        <div className="flex flex-col items-center justify-center">
+                          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                          <p>กำลังโหลดข้อมูล...</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : filteredRequests.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                         ไม่พบรายการคำขอ
                       </TableCell>
                     </TableRow>
-                  ) : filteredRequests.map((req) => (
-                    <TableRow key={req.id}>
-                      <TableCell className="pl-4 text-sm text-muted-foreground whitespace-nowrap">
-                        {fmtDate(req.created_at)}
-                      </TableCell>
-                      <TableCell className="font-medium">{req.title}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {req.request_type || "-"}{req.size ? ` / ${req.size}` : ""}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {fmt(req.amount)}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(req.status)}</TableCell>
-                      <TableCell className="text-right pr-4">
-                        <div className="flex justify-end gap-1">
-                          <Button size="sm" variant="outline"
-                            onClick={() => openViewDialog(req)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {canEditOrDelete(req.status, req.created_at) && (<>
-                            <Button size="sm" variant="outline"
-                              onClick={() => navigate(`/edit-request/${req.id}`)}>
-                              <Pencil className="h-4 w-4" />
+                  ) : (
+                    filteredRequests.map((req) => (
+                      <TableRow key={req.id}>
+                        <TableCell className="pl-4 text-sm text-muted-foreground whitespace-nowrap">
+                          {fmtDate(req.created_at)}
+                        </TableCell>
+                        <TableCell className="font-medium">{req.title}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {req.request_type || "-"}{req.size ? ` / ${req.size}` : ""}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {fmt(req.amount)}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(req.status)}</TableCell>
+                        <TableCell className="text-right pr-4">
+                          <div className="flex justify-end gap-1">
+                            <Button size="sm" variant="outline" onClick={() => openViewDialog(req)}>
+                              <Eye className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="outline"
-                              onClick={() => { setRequestToDelete(req); setDeleteDialogOpen(true); }}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>)}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            {canEditOrDelete(req.status, req.created_at) && (
+                              <>
+                                <Button size="sm" variant="outline" onClick={() => navigate(`/edit-request/${req.id}`)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setRequestToDelete(req);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -345,23 +408,19 @@ const MyRequests = () => {
         </Card>
       </section>
 
-      {/* ===== DIALOG ดูรายละเอียด ===== */}
+      {/* Dialog ดูรายละเอียด */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg">{selectedRequest?.title}</DialogTitle>
+            <DialogTitle>{selectedRequest?.title}</DialogTitle>
           </DialogHeader>
-
           {selectedRequest && (
             <div className="space-y-4 text-sm">
-
-              {/* สถานะ */}
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">สถานะ:</span>
                 {getStatusBadge(selectedRequest.status)}
               </div>
 
-              {/* ข้อมูลทั่วไป */}
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 bg-muted/40 p-4 rounded-lg">
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">จำนวนเงิน</p>
@@ -379,31 +438,12 @@ const MyRequests = () => {
                   <p className="text-xs text-muted-foreground mb-0.5">โซน</p>
                   <p className="font-medium">{selectedRequest.zone_id ? `โซน ${selectedRequest.zone_id}` : "-"}</p>
                 </div>
-                {selectedRequest.size_code && (
-                  <div className="col-span-2">
-                    <p className="text-xs text-muted-foreground mb-0.5">รหัส Size S</p>
-                    <p className="font-mono font-medium">{selectedRequest.size_code}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">ฝ่าย</p>
-                  <p className="font-medium">{selectedRequest.department || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">สาขา</p>
-                  <p className="font-medium">{selectedRequest.branch || "-"}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-xs text-muted-foreground mb-0.5">สังกัด</p>
-                  <p className="font-medium">{selectedRequest.affiliation || "-"}</p>
-                </div>
                 <div className="col-span-2">
                   <p className="text-xs text-muted-foreground mb-0.5">วันที่สร้าง</p>
                   <p className="font-medium">{fmtDate(selectedRequest.created_at)}</p>
                 </div>
               </div>
 
-              {/* รายละเอียด */}
               {selectedRequest.description && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">รายละเอียด</p>
@@ -411,59 +451,30 @@ const MyRequests = () => {
                 </div>
               )}
 
-              {/* หมายเหตุต่างๆ */}
-              {selectedRequest.admin_notes && (
-                <div className="bg-blue-50 border border-blue-200 p-3 rounded-md">
-                  <p className="text-xs text-blue-600 mb-1 font-medium">💬 หมายเหตุจาก Admin</p>
-                  <p className="whitespace-pre-wrap">{selectedRequest.admin_notes}</p>
-                </div>
-              )}
-              {selectedRequest.zone_approver_notes && (
-                <div className="bg-purple-50 border border-purple-200 p-3 rounded-md">
-                  <p className="text-xs text-purple-600 mb-1 font-medium">💬 หมายเหตุผู้อนุมัติ L1/L2</p>
-                  <p className="whitespace-pre-wrap">{selectedRequest.zone_approver_notes}</p>
-                </div>
-              )}
-              {selectedRequest.final_notes && (
-                <div className="bg-green-50 border border-green-200 p-3 rounded-md">
-                  <p className="text-xs text-green-600 mb-1 font-medium">✅ หมายเหตุขั้นสุดท้าย</p>
-                  <p className="whitespace-pre-wrap">{selectedRequest.final_notes}</p>
-                </div>
-              )}
-              {selectedRequest.rejected_reason && (
-                <div className="bg-red-50 border border-red-200 p-3 rounded-md">
-                  <p className="text-xs text-red-600 mb-1 font-medium">❌ เหตุผลที่ปฏิเสธ/ตีกลับ</p>
-                  <p className="whitespace-pre-wrap">{selectedRequest.rejected_reason}</p>
-                </div>
-              )}
-
-              {/* ปุ่มดูเอกสาร Drive */}
               <div className="border-t pt-4">
                 <p className="text-xs text-muted-foreground mb-2">เอกสารแนบ</p>
                 <DriveButton requestId={selectedRequest.id} />
               </div>
-
             </div>
           )}
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewDialogOpen(false)}>ปิด</Button>
             {selectedRequest && canEditOrDelete(selectedRequest.status, selectedRequest.created_at) && (
-              <Button onClick={() => { setViewDialogOpen(false); navigate(`/edit-request/${selectedRequest.id}`); }}>
-                <Pencil className="h-4 w-4 mr-2" />แก้ไข
+              <Button onClick={() => navigate(`/edit-request/${selectedRequest.id}`)}>
+                <Pencil className="h-4 w-4 mr-2" /> แก้ไข
               </Button>
             )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ===== DIALOG ยืนยันลบ ===== */}
+      {/* Dialog ยืนยันลบ */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>ยืนยันการลบคำขอ</AlertDialogTitle>
             <AlertDialogDescription>
-              คุณต้องการลบคำขอ "<strong>{requestToDelete?.title}</strong>" ใช่หรือไม่?
+              คุณต้องการลบคำขอ "<strong>{requestToDelete?.title}</strong>" ใช่หรือไม่?<br />
               การกระทำนี้ไม่สามารถย้อนกลับได้
             </AlertDialogDescription>
           </AlertDialogHeader>
