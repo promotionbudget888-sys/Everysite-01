@@ -26,7 +26,7 @@ import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { Link, useNavigate } from "react-router-dom";
 import { apiPost } from "@/lib/api";
-import { getStatusConfig, STATUS_FILTER_OPTIONS } from "@/lib/statusUtils";
+import { getStatusConfig } from "@/lib/statusUtils";
 
 interface Request {
   id: string;
@@ -49,13 +49,6 @@ interface Request {
   updated_at?: string;
 }
 
-interface DriveFile {
-  fileId: string;
-  fileName: string;
-  fileUrl: string;
-}
-
-// ปุ่มเปิดเอกสารใน Google Drive
 function DriveButton({ requestId }: { requestId: string }) {
   const [loading, setLoading] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
@@ -117,10 +110,10 @@ const MyRequests = () => {
   const [requestToDelete, setRequestToDelete] = useState<Request | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ดึงข้อมูลเมื่อ profile พร้อม
+  // ดึงข้อมูลเมื่อ profile เปลี่ยน
   useEffect(() => {
     if (profile?.id) {
-      console.log("🔄 โหลดข้อมูลคำขอสำหรับ user:", profile.id);
+      console.log("🔄 โหลดคำขอของผู้ใช้:", profile.id, "ชื่อ:", profile.full_name);
       fetchRequests();
     }
   }, [profile]);
@@ -132,14 +125,15 @@ const MyRequests = () => {
     }
 
     setLoading(true);
+    console.log("📤 ส่งคำขอไป server ด้วย requester_id:", String(profile.id));
 
     try {
       const res = await apiPost({
         mode: "list",
-        requester_id: String(profile.id),   // ส่งเป็น string เสมอ
+        requester_id: String(profile.id),   // สำคัญ: ส่งเป็น string
       });
 
-      console.log("📥 Response จาก server (list):", res);
+      console.log("📥 Response จาก Apps Script:", res);
 
       if (res.success && Array.isArray(res.data)) {
         const sorted = res.data.sort((a: Request, b: Request) => 
@@ -148,19 +142,19 @@ const MyRequests = () => {
         setRequests(sorted);
         console.log(`✅ โหลดสำเร็จ ${sorted.length} รายการ`);
       } else {
-        console.warn("⚠️ Server ส่งข้อมูลไม่ถูกต้อง:", res);
+        console.warn("⚠️ Server ตอบไม่สำเร็จหรือไม่มีข้อมูล:", res);
         toast({
-          title: "ไม่พบข้อมูล",
-          description: res.error || "ไม่สามารถโหลดรายการคำขอได้ในขณะนี้",
+          title: "ไม่พบรายการคำขอ",
+          description: res.error || "ไม่มีคำขอในขณะนี้",
           variant: "destructive",
         });
         setRequests([]);
       }
     } catch (error) {
-      console.error("❌ Error fetchRequests:", error);
+      console.error("❌ Error ในการโหลดคำขอ:", error);
       toast({
         title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถเชื่อมต่อกับระบบได้ กรุณาลองใหม่อีกครั้ง",
+        description: "ไม่สามารถโหลดรายการคำขอได้ กรุณาลองใหม่อีกครั้ง",
         variant: "destructive",
       });
       setRequests([]);
@@ -219,7 +213,7 @@ const MyRequests = () => {
       toast({ title: "ลบคำขอสำเร็จ" });
       setDeleteDialogOpen(false);
       setRequestToDelete(null);
-      fetchRequests(); // รีเฟรชข้อมูล
+      fetchRequests();
     } catch (error) {
       toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถลบคำขอได้", variant: "destructive" });
     } finally {
@@ -248,7 +242,7 @@ const MyRequests = () => {
   return (
     <AppLayout>
       <section className="space-y-6">
-        {/* HEADER */}
+        {/* Header */}
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -269,10 +263,10 @@ const MyRequests = () => {
           </div>
         </header>
 
-        {/* STATS */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
-            { label: "ทั้งหมด", value: stats.total, color: "" },
+            { label: "ทั้งหมด", value: stats.total },
             { label: "รอดำเนินการ", value: stats.pending, color: "text-warning" },
             { label: "อนุมัติแล้ว", value: stats.approved, color: "text-success" },
             { label: "ปฏิเสธ", value: stats.rejected, color: "text-destructive" },
@@ -283,13 +277,13 @@ const MyRequests = () => {
                 <CardTitle className="text-sm font-medium">{s.label}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                <div className={`text-2xl font-bold ${s.color || ""}`}>{s.value}</div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* FILTER */}
+        {/* Filter */}
         <Card>
           <CardContent className="pt-4 pb-4">
             <div className="flex flex-col sm:flex-row gap-3">
@@ -326,7 +320,7 @@ const MyRequests = () => {
           </CardContent>
         </Card>
 
-        {/* TABLE */}
+        {/* Table */}
         <Card>
           <CardHeader>
             <CardTitle>รายการคำขอ ({filteredRequests.length})</CardTitle>
@@ -348,10 +342,8 @@ const MyRequests = () => {
                   {loading ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-12">
-                        <div className="flex flex-col items-center justify-center">
-                          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                          <p>กำลังโหลดข้อมูล...</p>
-                        </div>
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+                        <p className="mt-2">กำลังโหลดข้อมูล...</p>
                       </TableCell>
                     </TableRow>
                   ) : filteredRequests.length === 0 ? (
@@ -427,7 +419,7 @@ const MyRequests = () => {
                   <p className="font-bold text-base">{fmt(selectedRequest.amount)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">ประเภทงบ</p>
+                  <p className="text-xs text-muted-foreground mb-0.5">ประเภท</p>
                   <p className="font-medium">{selectedRequest.request_type || "-"}</p>
                 </div>
                 <div>
