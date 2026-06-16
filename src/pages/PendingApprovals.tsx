@@ -183,13 +183,21 @@ export default function PendingApprovals() {
     return "อนุมัติ";
   };
 
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString("th-TH", {
-      year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-    });
+  const formatDate = (dateString: string) => {
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return dateString || "-";
+      return d.toLocaleDateString("th-TH", {
+        year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+      });
+    } catch { return dateString || "-"; }
+  };
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", minimumFractionDigits: 0 }).format(amount);
+  const formatCurrency = (amount: number) => {
+    try {
+      return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", minimumFractionDigits: 0 }).format(Number(amount) || 0);
+    } catch { return String(amount); }
+  };
 
   const getStatusBadge = (status: string) => {
     const config = getStatusConfig(status);
