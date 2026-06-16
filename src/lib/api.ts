@@ -1,6 +1,6 @@
-import { getSavedProfile, getToken } from '@/lib/auth';
+import { getSavedProfile } from '@/lib/auth';
 
-// ต้องตรงกับ CONFIG.SECRET_TOKEN ใน GAS
+const GAS_URL = "https://script.google.com/macros/s/AKfycbztj1lo4_m8LEa6wIiE7sRdzcuoMf7_0xEaWA8zbbUAT_HhhTRGedlnsp7hXon4qleMkw/exec";
 const SECRET_TOKEN = "g7Jd93LsKqV4mX2pYtR8nH1bC6wZ5eT0uQ9aF3kL2sV7dN4pX6cM8rT1yW0zU5h";
 
 const AUDIT_SKIP_MODES = new Set([
@@ -84,96 +84,64 @@ function buildAuditPayload(
   };
 }
 
-// ─── Supabase Proxy ───────────────────────────────────────────────────────────
+// ── เรียก GAS โดยตรง (text/plain เพื่อหลีกเลี่ยง CORS preflight) ──────────────
 
-function getProxyUrl(): string {
-  const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-  if (!baseUrl) console.error("❌ VITE_SUPABASE_URL ยังไม่ได้ตั้งค่าใน .env");
-  return baseUrl ? `${baseUrl}/functions/v1/google-script-proxy` : "";
-}
-
-function proxyHeaders(): Record<string, string> {
-  const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  const token = getToken() || "";
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (publishableKey) {
-    headers["apikey"] = publishableKey;
-    headers["Authorization"] = `Bearer ${publishableKey}`;
-  }
-  if (token) {
-    headers["x-app-token"] = token;
-  }
-  return headers;
-}
-
-async function callProxy<T = any>(
-  method: "GET" | "POST",
+async function callGAS<T = any>(
   payload: Record<string, any>
 ): Promise<ApiResponse<T>> {
-  const proxyUrl = getProxyUrl();
-  if (!proxyUrl) {
-    return { success: false, error: "ระบบยังไม่ได้ตั้งค่า กรุณาติดต่อผู้ดูแลระบบ" };
-  }
-
-  // ✅ inject _token ทุก request เพื่อผ่าน GAS auth check
-  const payloadWithToken = { ...payload, _token: SECRET_TOKEN };
+  const body = { ...payload, _token: SECRET_TOKEN };
 
   try {
-    const res = await fetch(proxyUrl, {
+    const res = await fetch(GAS_URL, {
       method: "POST",
-      headers: proxyHeaders(),
-      body: JSON.stringify({ method, payload: payloadWithToken }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
       return { success: false, error: `HTTP ${res.status}` };
     }
 
-    const json = await res.json();
+    const text = await res.text();
+    let json: any;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      return { success: false, error: "Response is not JSON" };
+    }
 
     if (!json?.success) {
-      return { success: false, error: json?.error || "Proxy request failed" };
+      return { success: false, error: json?.error || "Request failed" };
     }
 
-    // unwrap: proxy { success, data: GAS { success, data } }
-    const inner = json.data;
-    if (inner && typeof inner === "object" && "success" in inner) {
-      if (!inner.success) {
-        return { success: false, error: inner.error || "GAS request failed" };
-      }
-      return { success: true, data: inner.data as T };
-    }
-
-    return { success: true, data: inner as T };
+    return { success: true, data: json.data as T };
   } catch (err) {
-    console.error("Proxy error:", err);
+    console.error("GAS error:", err);
     return { success: false, error: String(err) };
   }
 }
 
-// ─── Audit Log (fire-and-forget) ─────────────────────────────────────────────
+// ── Audit Log (fire-and-forget) ───────────────────────────────────────────────
 
 function sendAuditLogIfNeeded(mode: string, body: Record<string, any>) {
   if (!shouldLogAudit(mode)) return;
   const payload = buildAuditPayload(mode, body);
-  callProxy("POST", payload).catch((err) =>
-    console.warn("Audit log failed:", err)
-  );
+  callGAS(payload).catch((err) => console.warn("Audit log failed:", err));
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
+// ── Public API ────────────────────────────────────────────────────────────────
 
 export async function apiGet<T = any>(
   params: Record<string, string>
 ): Promise<ApiResponse<T>> {
-  return callProxy<T>("GET", params);
+  return callGAS<T>(params);
 }
 
 export async function apiPost<T = any>(
   body: Record<string, any>
 ): Promise<ApiResponse<T>> {
   const mode = getRequestMode(body);
-  const result = await callProxy<T>("POST", body);
+  const result = await callGAS<T>(body);
 
   if (result.success) {
     sendAuditLogIfNeeded(mode, body);

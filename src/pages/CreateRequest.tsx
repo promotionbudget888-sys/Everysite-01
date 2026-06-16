@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -204,19 +203,6 @@ const CreateRequest = () => {
 
       if (!res.success) throw new Error(res.error || "ไม่สามารถสร้างคำขอได้");
 
-      // กันงบทันที
-      try {
-        const pendingField = data.request_type === "matching_fund" ? "pending_matching_fund" : "pending_everysite";
-        const currentPending = data.request_type === "matching_fund"
-          ? (profile.pending_matching_fund ?? 0)
-          : (profile.pending_everysite ?? 0);
-        await supabase
-          .from("profiles")
-          .update({ [pendingField]: currentPending + Math.round(amount) })
-          .eq("id", profile.id);
-      } catch (e) {
-        console.warn("Failed to update pending budget:", e);
-      }
 
       const requestId = res.data?.id;
       let uploadedDriveUrl = "";

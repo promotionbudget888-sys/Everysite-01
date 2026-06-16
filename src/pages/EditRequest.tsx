@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -187,24 +186,6 @@ export default function EditRequest() {
       });
       if (!res.success) throw new Error(res.error);
 
-      // กันงบส่วนต่าง — อัปเดต pending ถ้าจำนวนเงินเปลี่ยน
-      const oldAmount = Number(originalRequest.amount) || 0;
-      const amountDiff = Math.round(amount) - Math.round(oldAmount);
-      if (amountDiff !== 0) {
-        try {
-          const reqType = data.request_type || originalRequest.request_type;
-          const pendingField = reqType === "matching_fund" ? "pending_matching_fund" : "pending_everysite";
-          const currentPending = reqType === "matching_fund"
-            ? (profile.pending_matching_fund ?? 0)
-            : (profile.pending_everysite ?? 0);
-          await supabase
-            .from("profiles")
-            .update({ [pendingField]: Math.max(0, currentPending + amountDiff) })
-            .eq("id", profile.id);
-        } catch (e) {
-          console.warn("Failed to update pending budget:", e);
-        }
-      }
 
       // Upload new files to Google Drive
       if (files.length > 0) {
