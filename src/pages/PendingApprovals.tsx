@@ -252,13 +252,14 @@ export default function PendingApprovals() {
                   </TableHeader>
                   <TableBody>
                     {requests.map((request) => {
-                      const firstCode = request.size_code
-                        ? request.size_code.split(",")[0].trim()
+                      const sizeCodeStr = request.size_code != null ? String(request.size_code) : "";
+                      const firstCode = sizeCodeStr
+                        ? sizeCodeStr.split(",")[0].trim()
                         : request.id.slice(0, 8);
                       return (
                       <TableRow key={request.id}>
                         <TableCell className="font-mono text-sm">
-                          <span title={request.size_code || request.id}>{firstCode}</span>
+                          <span title={sizeCodeStr || request.id}>{firstCode}</span>
                         </TableCell>
                         <TableCell>
                           <p className="font-medium truncate max-w-[220px]">{request.title}</p>
@@ -305,7 +306,7 @@ export default function PendingApprovals() {
           {selectedRequest && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-sm text-muted-foreground">รหัสคำขอ</p><p className="font-mono">{selectedRequest.size_code || selectedRequest.id.slice(0, 8)}</p></div>
+                <div><p className="text-sm text-muted-foreground">รหัสคำขอ</p><p className="font-mono">{selectedRequest.size_code != null ? String(selectedRequest.size_code) : selectedRequest.id.slice(0, 8)}</p></div>
                 <div><p className="text-sm text-muted-foreground">สถานะ</p>{getStatusBadge(selectedRequest.status)}</div>
                 <div><p className="text-sm text-muted-foreground">ชื่อคำขอ</p><p className="font-medium">{selectedRequest.title}</p></div>
                 <div><p className="text-sm text-muted-foreground">จำนวนเงิน</p><p className="font-bold text-lg">{formatCurrency(selectedRequest.amount)}</p></div>
