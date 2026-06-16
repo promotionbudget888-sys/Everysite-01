@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/s
 import { AppSidebar } from './AppSidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -31,7 +32,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <SidebarTrigger className="-ml-2" />
         </header>
         <main className="flex-1 p-6 animate-fade-in">
-          {children}
+          <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </SidebarInset>
     </SidebarProvider>
