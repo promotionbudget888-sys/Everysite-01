@@ -234,48 +234,54 @@ export default function PendingApprovals() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>รหัส</TableHead>
+                      <TableHead className="w-[120px]">รหัส</TableHead>
                       <TableHead>ชื่อคำขอ</TableHead>
-                      <TableHead>ผู้ขอ</TableHead>
-                      <TableHead>จำนวนเงิน</TableHead>
-                      <TableHead>สถานะ</TableHead>
-                      <TableHead>วันที่สร้าง</TableHead>
-                      <TableHead className="text-right">การดำเนินการ</TableHead>
+                      <TableHead className="w-[160px]">ผู้ขอ</TableHead>
+                      <TableHead className="w-[120px]">จำนวนเงิน</TableHead>
+                      <TableHead className="w-[140px]">สถานะ</TableHead>
+                      <TableHead className="w-[130px] text-right">การดำเนินการ</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {requests.map((request) => (
+                    {requests.map((request) => {
+                      const firstCode = request.size_code
+                        ? request.size_code.split(",")[0].trim()
+                        : request.id.slice(0, 8);
+                      return (
                       <TableRow key={request.id}>
-                        <TableCell className="font-mono text-sm">{request.size_code || request.id.slice(0, 8)}</TableCell>
-                        <TableCell className="font-medium max-w-[200px] truncate">{request.title}</TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{request.requester_name}</p>
-                            <p className="text-xs text-muted-foreground">{request.requester_affiliation}</p>
-                          </div>
+                        <TableCell className="font-mono text-sm">
+                          <span title={request.size_code || request.id}>{firstCode}</span>
                         </TableCell>
-                        <TableCell>{formatCurrency(request.amount)}</TableCell>
+                        <TableCell>
+                          <p className="font-medium truncate max-w-[220px]">{request.title}</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(request.created_at)}</p>
+                        </TableCell>
+                        <TableCell>
+                          <p className="font-medium text-sm">{request.requester_name}</p>
+                          <p className="text-xs text-muted-foreground">{(request as any).affiliation || request.requester_affiliation}</p>
+                        </TableCell>
+                        <TableCell className="font-medium">{formatCurrency(request.amount)}</TableCell>
                         <TableCell>{getStatusBadge(request.status)}</TableCell>
-                        <TableCell>{formatDate(request.created_at)}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-1">
                             <Button variant="outline" size="sm"
                               onClick={() => { setSelectedRequest(request); setViewDialogOpen(true); }}>
-                              <Eye className="h-4 w-4 mr-1" />ดู
+                              <Eye className="h-4 w-4" />
                             </Button>
                             <Button size="sm"
                               className="bg-success hover:bg-success/90 text-success-foreground"
                               onClick={() => openActionDialog(request, "approve")}>
-                              <CheckCircle className="h-4 w-4 mr-1" />{getActionLabel(request)}
+                              <CheckCircle className="h-4 w-4" />
                             </Button>
                             <Button size="sm" variant="destructive"
                               onClick={() => openActionDialog(request, "reject")}>
-                              <XCircle className="h-4 w-4 mr-1" />ปฏิเสธ
+                              <XCircle className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
