@@ -111,13 +111,13 @@ const CreateRequest = () => {
       total: profile.budget_matching_fund ?? 0,
       used: profile.used_matching_fund ?? 0,
       pending: profile.pending_matching_fund ?? 0,
-      remaining: (profile.budget_matching_fund ?? 0) - (profile.used_matching_fund ?? 0) - (profile.pending_matching_fund ?? 0),
+      remaining: Math.max(0, (profile.budget_matching_fund ?? 0) - (profile.used_matching_fund ?? 0) - (profile.pending_matching_fund ?? 0)),
     },
     everysite: {
       total: profile.budget_everysite ?? 0,
       used: profile.used_everysite ?? 0,
       pending: profile.pending_everysite ?? 0,
-      remaining: (profile.budget_everysite ?? 0) - (profile.used_everysite ?? 0) - (profile.pending_everysite ?? 0),
+      remaining: Math.max(0, (profile.budget_everysite ?? 0) - (profile.used_everysite ?? 0) - (profile.pending_everysite ?? 0)),
     },
   } : null;
 
