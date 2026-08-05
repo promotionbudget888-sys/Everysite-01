@@ -231,6 +231,13 @@ CREATE POLICY requests_update_own      ON public.requests FOR UPDATE USING (requ
 CREATE POLICY requests_update_admin    ON public.requests FOR UPDATE USING (public.is_admin());
 CREATE POLICY requests_update_approver ON public.requests FOR UPDATE USING (public.is_approver() AND zone_id = public.my_zone());
 
+DROP POLICY IF EXISTS requests_delete_own   ON public.requests;
+DROP POLICY IF EXISTS requests_delete_admin ON public.requests;
+CREATE POLICY requests_delete_own   ON public.requests FOR DELETE USING (
+  requester_id = public.my_profile_id() AND status IN ('draft', 'returned')
+);
+CREATE POLICY requests_delete_admin ON public.requests FOR DELETE USING (public.is_admin());
+
 -- request_attachments
 DROP POLICY IF EXISTS attach_select_own      ON public.request_attachments;
 DROP POLICY IF EXISTS attach_select_admin    ON public.request_attachments;
