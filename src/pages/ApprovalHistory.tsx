@@ -10,21 +10,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle, XCircle, Eye, Loader2, Search, History, RefreshCw, FolderOpen, ExternalLink } from "lucide-react";
 import { apiPost } from "@/lib/api";
+import { listRequests, listAttachments } from "@/lib/db";
 import { getStatusConfig } from "@/lib/statusUtils";
 
 function DriveButton({ requestId }: { requestId: string }) {
   const [loading, setLoading] = useState(false);
-  const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
   const handleOpen = async () => {
-    if (url) { window.open(url, "_blank"); return; }
     setLoading(true);
     setError(false);
     try {
+      const att = await listAttachments(requestId);
+      if (att.success && Array.isArray(att.data) && att.data.length > 0) {
+        att.data.forEach((a: { file_url: string }) => window.open(a.file_url, "_blank"));
+        return;
+      }
       const res = await apiPost({ mode: "get_drive_url", id: requestId });
       if (res.success && res.data?.drive_url) {
-        setUrl(res.data.drive_url);
         window.open(res.data.drive_url, "_blank");
       } else {
         setError(true);
@@ -89,7 +92,7 @@ export default function ApprovalHistory() {
     setLoading(true);
     try {
       // ดึงทั้งหมดมาก่อน แล้ว filter ฝั่ง frontend ตาม role
-      const res = await apiPost({ mode: "list" });
+      const res = await listRequests();
       if (res.success && Array.isArray(res.data)) {
         let filtered: Request[] = res.data;
 

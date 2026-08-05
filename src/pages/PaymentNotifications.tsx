@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { Bell, Search, RefreshCw, Send, CheckCircle, Loader2, BanknoteIcon } from "lucide-react";
 import { apiPost } from "@/lib/api";
+import { listRequests, listUsers } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
 
 interface Request {
@@ -30,7 +31,6 @@ interface Request {
   branch: string | null;
   line_id?: string | null;
   requester_id?: string;
-  requester_email?: string;
 }
 
 export default function PaymentNotifications() {
@@ -57,8 +57,8 @@ export default function PaymentNotifications() {
     try {
       // ดึง requests และ users พร้อมกัน
       const [reqRes, usersRes] = await Promise.all([
-        apiPost({ mode: "list" }),
-        apiPost({ mode: "users" }),
+        listRequests(),
+        listUsers(),
       ]);
 
       if (reqRes.success && Array.isArray(reqRes.data)) {

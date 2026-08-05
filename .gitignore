@@ -37,3 +37,9 @@ coverage/
 .cache/
 .temp/
 *.local
+
+# Local agent config
+.claude/
+
+# GAS deployment artifact — มีความลับ (LINE tokens / SECRET_TOKEN) วางใน Apps Script เท่านั้น
+supabase/Code.gs

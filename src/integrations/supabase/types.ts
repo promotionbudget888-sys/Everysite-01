@@ -7,236 +7,204 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
-      audit_logs: {
-        Row: {
-          action: string
-          actor_id: string | null
-          actor_name: string
-          actor_role: string
-          created_at: string
-          detail: string | null
-          id: string
-          target_id: string | null
-          target_type: string
-        }
-        Insert: {
-          action: string
-          actor_id?: string | null
-          actor_name: string
-          actor_role: string
-          created_at?: string
-          detail?: string | null
-          id?: string
-          target_id?: string | null
-          target_type: string
-        }
-        Update: {
-          action?: string
-          actor_id?: string | null
-          actor_name?: string
-          actor_role?: string
-          created_at?: string
-          detail?: string | null
-          id?: string
-          target_id?: string | null
-          target_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "audit_logs_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
-          affiliation: string | null
-          branch: string | null
-          budget_everysite: number
-          budget_matching_fund: number
-          created_at: string
-          department: string | null
-          email: string
-          first_name: string | null
-          full_name: string
           id: string
+          user_id: string
+          email: string
+          full_name: string
+          first_name: string | null
           last_name: string | null
-          pending_everysite: number
-          pending_matching_fund: number
-          phone: string | null
           role: string
           status: string
-          updated_at: string
-          used_everysite: number
-          used_matching_fund: number
-          user_id: string
           zone_id: string | null
-        }
-        Insert: {
-          affiliation?: string | null
-          branch?: string | null
-          budget_everysite?: number
-          budget_matching_fund?: number
-          created_at?: string
-          department?: string | null
-          email: string
-          first_name?: string | null
-          full_name: string
-          id?: string
-          last_name?: string | null
-          pending_everysite?: number
-          pending_matching_fund?: number
-          phone?: string | null
-          role?: string
-          status?: string
-          updated_at?: string
-          used_everysite?: number
-          used_matching_fund?: number
-          user_id: string
-          zone_id?: string | null
-        }
-        Update: {
-          affiliation?: string | null
-          branch?: string | null
-          budget_everysite?: number
-          budget_matching_fund?: number
-          created_at?: string
-          department?: string | null
-          email?: string
-          first_name?: string | null
-          full_name?: string
-          id?: string
-          last_name?: string | null
-          pending_everysite?: number
-          pending_matching_fund?: number
-          phone?: string | null
-          role?: string
-          status?: string
-          updated_at?: string
-          used_everysite?: number
-          used_matching_fund?: number
-          user_id?: string
-          zone_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_zone_id_fkey"
-            columns: ["zone_id"]
-            isOneToOne: false
-            referencedRelation: "zones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_zone_id_fkey"
-            columns: ["zone_id"]
-            isOneToOne: false
-            referencedRelation: "zones_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      request_attachments: {
-        Row: {
+          phone: string | null
+          affiliation: string | null
+          department: string | null
+          branch: string | null
+          line_id: string | null
+          budget_matching_fund: number
+          budget_everysite: number
+          used_matching_fund: number
+          used_everysite: number
+          pending_matching_fund: number
+          pending_everysite: number
           created_at: string
-          file_name: string
-          file_size: number | null
-          file_type: string | null
-          file_url: string
-          id: string
-          request_id: string
+          updated_at: string
         }
         Insert: {
-          created_at?: string
-          file_name: string
-          file_size?: number | null
-          file_type?: string | null
-          file_url: string
           id?: string
-          request_id: string
+          user_id: string
+          email: string
+          full_name: string
+          first_name?: string | null
+          last_name?: string | null
+          role?: string
+          status?: string
+          zone_id?: string | null
+          phone?: string | null
+          affiliation?: string | null
+          department?: string | null
+          branch?: string | null
+          line_id?: string | null
+          budget_matching_fund?: number
+          budget_everysite?: number
+          used_matching_fund?: number
+          used_everysite?: number
+          pending_matching_fund?: number
+          pending_everysite?: number
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          created_at?: string
-          file_name?: string
-          file_size?: number | null
-          file_type?: string | null
-          file_url?: string
           id?: string
-          request_id?: string
+          user_id?: string
+          email?: string
+          full_name?: string
+          first_name?: string | null
+          last_name?: string | null
+          role?: string
+          status?: string
+          zone_id?: string | null
+          phone?: string | null
+          affiliation?: string | null
+          department?: string | null
+          branch?: string | null
+          line_id?: string | null
+          budget_matching_fund?: number
+          budget_everysite?: number
+          used_matching_fund?: number
+          used_everysite?: number
+          pending_matching_fund?: number
+          pending_everysite?: number
+          created_at?: string
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "request_attachments_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "requests"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      zones: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          sort_order: number | null
+          total_budget: number
+          used_budget: number
+          remaining_budget: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          name: string
+          description?: string | null
+          sort_order?: number | null
+          total_budget?: number
+          used_budget?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          sort_order?: number | null
+          total_budget?: number
+          used_budget?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       requests: {
         Row: {
-          admin_notes: string | null
-          amount: number
-          created_at: string
-          description: string | null
-          final_notes: string | null
           id: string
-          pdf_url: string | null
-          request_type: string | null
           requester_id: string
+          zone_id: string | null
+          title: string
+          description: string | null
+          amount: number
+          status: string
+          request_type: string | null
           size: string | null
           size_code: string | null
-          status: string
-          title: string
-          updated_at: string
+          requester_name: string | null
+          requester_email: string | null
+          department: string | null
+          branch: string | null
+          affiliation: string | null
+          admin_notes: string | null
           zone_approver_notes: string | null
-          zone_id: string
+          final_notes: string | null
+          rejected_reason: string | null
+          pdf_url: string | null
+          admin_at: string | null
+          zone1_at: string | null
+          zone2_at: string | null
+          final_at: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          admin_notes?: string | null
-          amount: number
-          created_at?: string
-          description?: string | null
-          final_notes?: string | null
           id?: string
-          pdf_url?: string | null
-          request_type?: string | null
           requester_id: string
+          zone_id?: string | null
+          title: string
+          description?: string | null
+          amount?: number
+          status?: string
+          request_type?: string | null
           size?: string | null
           size_code?: string | null
-          status?: string
-          title: string
-          updated_at?: string
+          requester_name?: string | null
+          requester_email?: string | null
+          department?: string | null
+          branch?: string | null
+          affiliation?: string | null
+          admin_notes?: string | null
           zone_approver_notes?: string | null
-          zone_id: string
+          final_notes?: string | null
+          rejected_reason?: string | null
+          pdf_url?: string | null
+          admin_at?: string | null
+          zone1_at?: string | null
+          zone2_at?: string | null
+          final_at?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          admin_notes?: string | null
-          amount?: number
-          created_at?: string
-          description?: string | null
-          final_notes?: string | null
           id?: string
-          pdf_url?: string | null
-          request_type?: string | null
           requester_id?: string
+          zone_id?: string | null
+          title?: string
+          description?: string | null
+          amount?: number
+          status?: string
+          request_type?: string | null
           size?: string | null
           size_code?: string | null
-          status?: string
-          title?: string
-          updated_at?: string
+          requester_name?: string | null
+          requester_email?: string | null
+          department?: string | null
+          branch?: string | null
+          affiliation?: string | null
+          admin_notes?: string | null
           zone_approver_notes?: string | null
-          zone_id?: string
+          final_notes?: string | null
+          rejected_reason?: string | null
+          pdf_url?: string | null
+          admin_at?: string | null
+          zone1_at?: string | null
+          zone2_at?: string | null
+          final_at?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -245,94 +213,116 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "requests_zone_id_fkey"
-            columns: ["zone_id"]
-            isOneToOne: false
-            referencedRelation: "zones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "requests_zone_id_fkey"
-            columns: ["zone_id"]
-            isOneToOne: false
-            referencedRelation: "zones_public"
-            referencedColumns: ["id"]
-          },
+          }
         ]
       }
-      zones: {
+      request_attachments: {
         Row: {
-          created_at: string
-          description: string | null
           id: string
-          name: string
-          remaining_budget: number | null
-          sort_order: number | null
-          total_budget: number
-          updated_at: string
-          used_budget: number
+          request_id: string
+          file_name: string
+          file_url: string
+          file_type: string | null
+          file_size: number | null
+          created_at: string
         }
         Insert: {
-          created_at?: string
-          description?: string | null
           id?: string
-          name: string
-          remaining_budget?: number | null
-          sort_order?: number | null
-          total_budget?: number
-          updated_at?: string
-          used_budget?: number
+          request_id: string
+          file_name: string
+          file_url: string
+          file_type?: string | null
+          file_size?: number | null
+          created_at?: string
         }
         Update: {
-          created_at?: string
-          description?: string | null
           id?: string
-          name?: string
-          remaining_budget?: number | null
-          sort_order?: number | null
-          total_budget?: number
-          updated_at?: string
-          used_budget?: number
+          request_id?: string
+          file_name?: string
+          file_url?: string
+          file_type?: string | null
+          file_size?: number | null
+          created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "request_attachments_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "requests"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      audit_logs: {
+        Row: {
+          id: string
+          actor_id: string | null
+          actor_name: string
+          actor_role: string
+          action: string
+          target_type: string
+          target_id: string | null
+          detail: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          actor_id?: string | null
+          actor_name: string
+          actor_role: string
+          action: string
+          target_type: string
+          target_id?: string | null
+          detail?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          actor_id?: string | null
+          actor_name?: string
+          actor_role?: string
+          action?: string
+          target_type?: string
+          target_id?: string | null
+          detail?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {
       zones_public: {
         Row: {
-          description: string | null
           id: string | null
           name: string | null
+          description: string | null
           sort_order: number | null
-        }
-        Insert: {
-          description?: string | null
-          id?: string | null
-          name?: string | null
-          sort_order?: number | null
-        }
-        Update: {
-          description?: string | null
-          id?: string | null
-          name?: string | null
-          sort_order?: number | null
         }
         Relationships: []
       }
     }
     Functions: {
-      generate_size_code: { Args: never; Returns: string }
-      get_my_role: { Args: never; Returns: string }
-      get_my_status: { Args: never; Returns: string }
-      is_approved_user: { Args: { _user_id: string }; Returns: boolean }
-      transfer_matching_to_everysite:
-        | { Args: { p_amount: number }; Returns: undefined }
-        | {
-            Args: { p_amount: number; p_profile_id?: string }
-            Returns: undefined
-          }
+      generate_size_code: { Args: Record<string, never>; Returns: string }
+      is_admin: { Args: Record<string, never>; Returns: boolean }
+      is_approved: { Args: Record<string, never>; Returns: boolean }
+      is_approver: { Args: Record<string, never>; Returns: boolean }
+      my_role: { Args: Record<string, never>; Returns: string }
+      my_status: { Args: Record<string, never>; Returns: string }
+      my_profile_id: { Args: Record<string, never>; Returns: string }
+      my_zone: { Args: Record<string, never>; Returns: string }
+      transfer_matching_to_everysite: {
+        Args: { p_amount: number }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

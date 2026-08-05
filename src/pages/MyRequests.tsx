@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { Link, useNavigate } from "react-router-dom";
 import { apiPost } from "@/lib/api";
+import { listRequests, deleteRequest, listAttachments } from "@/lib/db";
 import { getStatusConfig } from "@/lib/statusUtils";
 
 interface Request {
@@ -54,18 +55,21 @@ interface Request {
 // ─────────────────────────────────────────────
 function DriveButton({ requestId }: { requestId: string }) {
   const [loading, setLoading] = useState(false);
-  const [url,     setUrl]     = useState<string | null>(null);
   const [error,   setError]   = useState(false);
 
   const handleOpen = async () => {
-    if (url) { window.open(url, "_blank"); return; }
-
     setLoading(true);
     setError(false);
     try {
+      // 1) ลิงก์ไฟล์จาก Supabase (เปิดตรงไฟล์ ไม่เด้งหน้าเลือกโฟลเดอร์)
+      const att = await listAttachments(requestId);
+      if (att.success && Array.isArray(att.data) && att.data.length > 0) {
+        att.data.forEach((a: { file_url: string }) => window.open(a.file_url, "_blank"));
+        return;
+      }
+      // 2) fallback: ไฟล์เก่าที่ยังไม่ได้ลิงก์ → เปิดโฟลเดอร์ Drive จาก GAS
       const res = await apiPost({ action: "get_drive_url", id: requestId });
       if (res.success && res.data?.drive_url) {
-        setUrl(res.data.drive_url);
         window.open(res.data.drive_url, "_blank");
       } else {
         setError(true);
@@ -133,10 +137,7 @@ const MyRequests = () => {
     console.log("📤 fetchRequests | requester_id =", requesterId);
 
     try {
-      const res = await apiPost({
-        action:       "list",        // ★ ใช้ action แทน mode
-        requester_id: requesterId,
-      });
+      const res = await listRequests({ requesterId });
 
       console.log("📥 response:", res);
 
@@ -199,7 +200,7 @@ const MyRequests = () => {
     if (!requestToDelete) return;
     setIsDeleting(true);
     try {
-      const res = await apiPost({ action: "delete", id: requestToDelete.id });
+      const res = await deleteRequest(requestToDelete.id);
       if (!res.success) throw new Error(res.error || "ลบไม่สำเร็จ");
       toast({ title: "ลบคำขอสำเร็จแล้ว" });
       setDeleteDialogOpen(false);

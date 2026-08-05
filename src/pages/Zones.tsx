@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Search, Users, Wallet, Edit, Save, Loader2 } from "lucide-react";
 import { UserStatus, getStatusLabel } from "@/lib/auth";
-import { apiPost } from "@/lib/api";
+import { listUsers, updateUser } from "@/lib/db";
 
 interface UserRow {
   id: string;
@@ -50,7 +50,7 @@ export default function Zones() {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const res = await apiPost({ mode: "users" });
+    const res = await listUsers();
     if (res.success && Array.isArray(res.data)) {
       setUsers(res.data);
     } else {
@@ -97,7 +97,7 @@ export default function Zones() {
       return;
     }
     setIsSaving(true);
-    const res = await apiPost({ mode: "update_user", id: editingUser.id, budget_matching_fund: mf, budget_everysite: es });
+    const res = await updateUser(editingUser.id, { budget_matching_fund: mf, budget_everysite: es });
     if (res.success) {
       toast({ title: "สำเร็จ", description: "อัปเดตงบสำเร็จ" });
       setDialogOpen(false);

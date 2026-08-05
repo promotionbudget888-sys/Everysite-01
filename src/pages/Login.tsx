@@ -7,8 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn } from 'lucide-react';
-import { apiPost } from '@/lib/api';
-import { UserProfile } from '@/lib/auth';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -16,7 +14,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { profile, loading: authLoading, login } = useAuth();
+  const { profile, loading: authLoading, signIn } = useAuth();
 
   useEffect(() => {
     if (!authLoading && profile) {
@@ -42,50 +40,32 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await apiPost<{
-        token?: string;
-        user?: UserProfile;
-        error?: string;
-      }>({
-        mode: 'login',
-        email: email.trim(),
-        password: password.trim(),
-      });
+      const res = await signIn(email, password);
 
-      if (!res.success || !res.data?.user || !res.data?.token) {
-        toast({
-          title: 'เข้าสู่ระบบไม่สำเร็จ',
-          description:
-            res.error || res.data?.error || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
-          variant: 'destructive',
-        });
+      if (!res.ok) {
+        if (res.status === 'pending') {
+          toast({
+            title: 'บัญชีรออนุมัติ',
+            description: 'บัญชีของคุณยังรอการอนุมัติจากผู้ดูแลระบบ',
+            variant: 'destructive',
+          });
+        } else if (res.status === 'rejected') {
+          toast({
+            title: 'บัญชีถูกปฏิเสธ',
+            description: 'บัญชีของคุณถูกปฏิเสธ กรุณาติดต่อผู้ดูแลระบบ',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'เข้าสู่ระบบไม่สำเร็จ',
+            description: res.error || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+            variant: 'destructive',
+          });
+        }
         return;
       }
 
-      const userProfile = res.data.user;
-
-      if (userProfile.status === 'pending') {
-        toast({
-          title: 'บัญชีรออนุมัติ',
-          description:
-            'บัญชีของคุณยังรอการอนุมัติจากผู้ดูแลระบบ',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (userProfile.status === 'rejected') {
-        toast({
-          title: 'บัญชีถูกปฏิเสธ',
-          description:
-            'บัญชีของคุณถูกปฏิเสธ กรุณาติดต่อผู้ดูแลระบบ',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      login(userProfile, res.data.token);
-
+      // สำเร็จ — useEffect ด้านบนจะพาไปหน้าตาม role เมื่อ profile พร้อม
       toast({
         title: 'เข้าสู่ระบบสำเร็จ',
         description: 'ยินดีต้อนรับเข้าสู่ระบบงบส่งเสริม',
