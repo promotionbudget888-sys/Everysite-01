@@ -262,7 +262,7 @@ export default function PaymentNotifications() {
                       <TableRow key={req.id} className={sentIds.has(req.id) ? "opacity-60" : ""}>
                         <TableCell>
                           <p className="font-medium max-w-[200px] truncate">{req.title}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{req.size_code || req.id.slice(0, 8)}</p>
+                          <p className="text-xs text-muted-foreground font-mono max-w-[200px] truncate" title={req.size_code || req.id.slice(0, 8)}>{req.size_code || req.id.slice(0, 8)}</p>
                         </TableCell>
                         <TableCell className="text-sm">{req.zone_id ? `โซน ${req.zone_id}` : "-"}</TableCell>
                         <TableCell className="text-sm">{req.department || req.affiliation || "-"}</TableCell>

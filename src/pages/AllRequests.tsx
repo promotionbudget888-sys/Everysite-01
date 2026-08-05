@@ -10,11 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, FileText, RefreshCw, Eye, CheckCircle, XCircle, RotateCcw, Trophy, Banknote, SendHorizontal, FolderOpen, ExternalLink, Loader2, Send } from "lucide-react";
+import { Search, FileText, RefreshCw, Eye, CheckCircle, XCircle, RotateCcw, Trophy, Banknote, SendHorizontal, FolderOpen, ExternalLink, Loader2, Send, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { apiPost } from "@/lib/api";
-import { listRequests, listUsers, updateStatus, rejectRequest } from "@/lib/db";
+import { listRequests, listUsers, updateStatus, rejectRequest, deleteRequest } from "@/lib/db";
 import { getStatusConfig } from "@/lib/statusUtils";
 
 interface Request {
@@ -112,6 +112,8 @@ export default function AllRequests() {
   const [lineMessage, setLineMessage] = useState("");
   const [lineUserId, setLineUserId] = useState("");
   const [sendingLine, setSendingLine] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Request | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const isAdmin = profile?.role === "admin";
 
@@ -264,6 +266,21 @@ export default function AllRequests() {
     } finally {
       setSendingLine(false);
       setLineDialogOpen(false);
+    }
+  };
+
+  // ลบคำขอ — ลบทั้งใน Supabase และ mirror ลบใน Google Sheet
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const res = await deleteRequest(deleteTarget.id);
+    setDeleting(false);
+    if (res.success) {
+      toast({ title: "ลบคำขอแล้ว", description: "ลบทั้งใน Supabase และ Google Sheet เรียบร้อย" });
+      setDeleteTarget(null);
+      fetchRequests();
+    } else {
+      toast({ title: "ลบไม่สำเร็จ", description: res.error, variant: "destructive" });
     }
   };
 
@@ -482,6 +499,13 @@ export default function AllRequests() {
                               <Banknote className="h-3.5 w-3.5 mr-1" />จ่าย
                             </Button>
                           )}
+
+                          {/* ลบคำขอ (admin ทุกสถานะ) */}
+                          <Button size="sm" variant="outline"
+                            className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                            onClick={() => setDeleteTarget(req)}>
+                            <Trash2 className="h-3.5 w-3.5 mr-1" />ลบ
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -508,7 +532,7 @@ export default function AllRequests() {
                 <div><p className="text-muted-foreground">โซน</p><p className="font-medium">{selectedRequest.zone_id ? `โซน ${selectedRequest.zone_id}` : "-"}</p></div>
                 <div><p className="text-muted-foreground">สถานะ</p><div className="mt-1">{getStatusBadge(selectedRequest.status)}</div></div>
                 <div><p className="text-muted-foreground">ประเภทงบ</p><p className="font-medium">{selectedRequest.request_type || "-"}{selectedRequest.size ? ` (${selectedRequest.size})` : ""}</p></div>
-                <div><p className="text-muted-foreground">รหัส Size S</p><p className="font-medium font-mono">{selectedRequest.size_code || "-"}</p></div>
+                <div><p className="text-muted-foreground">รหัส Size S</p><p className="font-medium font-mono break-all">{selectedRequest.size_code || "-"}</p></div>
               </div>
               {selectedRequest.description && (
                 <div>
@@ -661,6 +685,36 @@ export default function AllRequests() {
                 ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />กำลังส่ง...</>
                 : <><Send className="h-4 w-4 mr-2" />ส่ง LINE</>
               }
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog ยืนยันการลบ */}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">ยืนยันการลบคำขอ</DialogTitle>
+            <DialogDescription>
+              การลบนี้จะลบข้อมูลออกจาก <b>Supabase</b> และ <b>Google Sheet</b> อย่างถาวร กู้คืนไม่ได้
+            </DialogDescription>
+          </DialogHeader>
+          {deleteTarget && (
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm space-y-1">
+              <p className="font-medium">{deleteTarget.title}</p>
+              <p className="text-muted-foreground">
+                {deleteTarget.requester_name || "-"} · {fmt(deleteTarget.amount)}
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              ยกเลิก
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />กำลังลบ...</>
+                : <><Trash2 className="h-4 w-4 mr-2" />ลบถาวร</>}
             </Button>
           </DialogFooter>
         </DialogContent>
