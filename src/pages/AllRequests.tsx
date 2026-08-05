@@ -11,10 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, FileText, RefreshCw, Eye, CheckCircle, XCircle, RotateCcw, Trophy, Banknote, SendHorizontal, FolderOpen, ExternalLink, Loader2, Send } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { apiPost } from "@/lib/api";
+import { listRequests, listUsers, updateStatus, rejectRequest } from "@/lib/db";
 import { getStatusConfig } from "@/lib/statusUtils";
 
 interface Request {
@@ -119,7 +119,7 @@ export default function AllRequests() {
 
   const fetchRequests = async () => {
     setLoading(true);
-    const res = await apiPost({ mode: "list" });
+    const res = await listRequests();
     if (res.success && Array.isArray(res.data)) {
       const valid = res.data.filter((r: Request) => r.id && r.title);
       valid.sort((a: Request, b: Request) =>
@@ -195,37 +195,31 @@ export default function AllRequests() {
     }
   };
 
-  const getApiMode = (action: string): string => {
-    switch (action) {
-      case "review":        return "update_status";
-      case "finalize":      return "update_status";
-      case "reject":        return "reject";
-      case "return":        return "update_status";
-      case "set_competing": return "update_status";
-      case "set_paid":      return "update_status";
-      default:              return action;
-    }
-  };
-
   const handleAction = async () => {
     if (!selectedRequest) return;
     setActionLoading(true);
 
     const newStatus    = getNewStatus(actionType);
-    const mode         = getApiMode(actionType);
     const approverName = profile?.full_name || "ผู้ดูแลระบบ";
+    const lineCard = {
+      id:             selectedRequest.id,
+      approver_name:  approverName,
+      title:          selectedRequest.title,
+      amount:         Number(selectedRequest.amount).toLocaleString(),
+      requester_name: selectedRequest.requester_name,
+      zone_id:        selectedRequest.zone_id,
+    };
 
-    const res = await apiPost({
-      mode,
-      id:            selectedRequest.id,
-      status:        newStatus,
-      notes:         actionNotes,
-      approver_name: approverName,
-      requester_id:  selectedRequest.requester_id,
-      request_type:  selectedRequest.request_type,
-      ...(actionType === "reject"    && { rejected_reason: actionNotes }),
-      ...(actionType === "set_paid"  && { used_amount: Number(usedAmount) || 0 }),
-    });
+    const res = actionType === "reject"
+      ? await rejectRequest({ ...lineCard, rejected_reason: actionNotes, notes: actionNotes })
+      : await updateStatus({
+          ...lineCard,
+          status:       newStatus,
+          notes:        actionNotes,
+          requester_id: selectedRequest.requester_id,
+          request_type: selectedRequest.request_type,
+          ...(actionType === "set_paid" && { used_amount: Number(usedAmount) || 0 }),
+        });
 
     if (!res.success) {
       toast({ title: "เกิดข้อผิดพลาด", description: res.error, variant: "destructive" });
@@ -237,7 +231,7 @@ export default function AllRequests() {
       // ✅ เปิด dialog แก้ข้อความ LINE ก่อนส่ง
       if (actionType === "set_paid" && selectedRequest) {
         try {
-          const usersRes = await apiPost({ mode: "users" });
+          const usersRes = await listUsers();
           let uid = "";
           if (usersRes.success && Array.isArray(usersRes.data)) {
             const u = usersRes.data.find((u: { email?: string; line_id?: string }) =>

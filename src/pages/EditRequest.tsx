@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiPost } from "@/lib/api";
+import { getRequest, updateRequest, addAttachment } from "@/lib/db";
 import { FileUp, X, Loader2, ArrowLeft, Send, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -103,7 +104,7 @@ export default function EditRequest() {
     if (!id || !profile) return;
     const fetchRequest = async () => {
       setLoadingRequest(true);
-      const res = await apiPost({ mode: "get", id });
+      const res = await getRequest(id);
       if (!res.success || !res.data) {
         toast({ title: "ไม่พบคำขอ", variant: "destructive" });
         navigate("/my-requests");
@@ -174,9 +175,7 @@ export default function EditRequest() {
     const amount = Number(data.amount);
     setIsSubmitting(true);
     try {
-      const res = await apiPost({
-        mode: "update",
-        id: originalRequest.id,
+      const res = await updateRequest(originalRequest.id, {
         title: data.title.trim(),
         description: data.description.trim(),
         amount: Math.round(amount),
@@ -193,7 +192,7 @@ export default function EditRequest() {
         for (const f of files) {
           try {
             const base64 = await fileToBase64(f.file);
-            await apiPost({
+            const uploadRes = await apiPost({
               mode: "upload_attachment",
               action: "upload_attachment",
               fileName: f.file.name,
@@ -203,6 +202,15 @@ export default function EditRequest() {
               zoneName,
               requestId: originalRequest.id,
             });
+            if (uploadRes?.data?.fileUrl) {
+              await addAttachment({
+                request_id: originalRequest.id,
+                file_name: f.file.name,
+                file_url: uploadRes.data.fileUrl,
+                file_type: f.file.type || null,
+                file_size: f.file.size,
+              });
+            }
           } catch (uploadErr) {
             console.error("File upload error:", uploadErr);
             toast({

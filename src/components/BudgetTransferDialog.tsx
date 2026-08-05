@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiPost } from "@/lib/api";
+import { updateUser } from "@/lib/db";
 import { ArrowRight, Loader2, Repeat } from "lucide-react";
 
 interface BudgetTransferDialogProps {
@@ -35,9 +35,7 @@ export function BudgetTransferDialog({ profileId, matchingFundRemaining, matchin
       // Use update_user to adjust both budget columns
       const newMF = matchingFundTotal - transferAmount;
       const newES = everysiteTotal + transferAmount;
-      const res = await apiPost({
-        mode: "update_user",
-        id: profileId,
+      const res = await updateUser(String(profileId), {
         budget_matching_fund: newMF,
         budget_everysite: newES,
       });

@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { UserCheck, UserX, Search, Users, Clock, CheckCircle, XCircle, Edit, RefreshCw } from 'lucide-react';
 import { UserRole, UserStatus, getRoleLabel } from '@/lib/auth';
-import { apiPost } from '@/lib/api';
+import { listUsers, updateUser, setUserStatus } from '@/lib/db';
 
 interface UserProfile {
   id: string;
@@ -50,7 +50,7 @@ export default function UserManagement() {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const res = await apiPost({ mode: 'users' });
+    const res = await listUsers();
     if (res.success && Array.isArray(res.data)) setUsers(res.data);
     else setUsers([]);
     setLoading(false);
@@ -60,13 +60,7 @@ export default function UserManagement() {
     if (actionLoading) return;
     setActionLoading(userId);
     try {
-      // ✅ ส่งชื่อผู้อนุมัติไปด้วย
-      const res = await apiPost({
-        mode: 'update_user',
-        id: userId,
-        status: newStatus,
-        approver_name: profile?.full_name || 'ผู้ดูแลระบบ',
-      });
+      const res = await setUserStatus(userId, newStatus);
       if (res.success) {
         toast({ title: 'สำเร็จ', description: newStatus === 'approved' ? 'อนุมัติเรียบร้อย' : 'ปฏิเสธเรียบร้อย' });
         fetchUsers();
@@ -92,15 +86,12 @@ export default function UserManagement() {
     if (!editingUser || actionLoading) return;
     setActionLoading(editingUser.id);
     try {
-      const res = await apiPost({
-        mode: 'update_user',
-        id: editingUser.id,
+      const res = await updateUser(editingUser.id, {
         role: editRole,
         zone_id: editZone,
         budget_matching_fund: editBudgetMF,
         budget_everysite: editBudgetES,
         line_id: editLineId,
-        approver_name: profile?.full_name || 'ผู้ดูแลระบบ',
       });
       if (res.success) {
         toast({ title: 'บันทึกสำเร็จ' });

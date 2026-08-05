@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiPost } from "@/lib/api";
+import { listUsers, createRequest, addAttachment } from "@/lib/db";
 import { FileUp, X, Loader2, ArrowLeft, Send, Wallet, AlertTriangle, Download, Lock, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BudgetTransferDialog } from "@/components/BudgetTransferDialog";
@@ -89,7 +90,7 @@ function fileToBase64(file: File): Promise<string> {
 
 const CreateRequest = () => {
   const navigate = useNavigate();
-  const { profile, updateProfile } = useAuth();
+  const { profile, updateProfile, refreshProfile } = useAuth();
   const { toast } = useToast();
 
   const [files, setFiles] = useState<FileWithPreview[]>([]);
@@ -106,24 +107,10 @@ const CreateRequest = () => {
   const selectedSize = form.watch("size");
   const enteredAmount = Number(form.watch("amount")) || 0;
 
-  // ดึงงบสดจาก GAS ทุกครั้งที่เปิดหน้า เพื่อให้ข้อมูลตรงกับ Sheet เสมอ
+  // ดึงงบสดจาก Supabase ทุกครั้งที่เปิดหน้า เพื่อให้ข้อมูลตรงเสมอ
   useEffect(() => {
     if (!profile?.id) return;
-    apiPost({ mode: "list_users" }).then((res) => {
-      if (res.success && Array.isArray(res.data)) {
-        const me = res.data.find((u: any) => u.id === profile.id || u.email === profile.email);
-        if (me) {
-          updateProfile({
-            budget_matching_fund: Number(me.budget_matching_fund ?? me.budget_mf ?? 0),
-            budget_everysite:     Number(me.budget_everysite ?? me.budget_es ?? 0),
-            used_matching_fund:   Number(me.used_matching_fund ?? 0),
-            used_everysite:       Number(me.used_everysite ?? 0),
-            pending_matching_fund: Number(me.pending_matching_fund ?? 0),
-            pending_everysite:    Number(me.pending_everysite ?? 0),
-          });
-        }
-      }
-    }).catch(() => {/* ใช้ข้อมูล profile เดิมถ้า fetch ไม่ได้ */});
+    refreshProfile();
   }, [profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const budget: BudgetInfo | null = profile ? {
@@ -201,16 +188,13 @@ const CreateRequest = () => {
         sizeCode = data.size_code?.trim().toUpperCase() || null;
       }
 
-      const res = await apiPost({
-        mode: "create",
+      const res = await createRequest({
         title: data.title.trim(),
         description: data.description.trim(),
         amount: Math.round(amount),
         request_type: data.request_type,
         size: data.request_type === "everysite" ? data.size : null,
         size_code: sizeCode,
-        // ✅ ส่ง id เป็น string ตรงๆ ไม่แปลงเป็น Number
-        // เพราะหลัง migrate id จะเป็น UUID — Number("uuid") = NaN แล้วพัง
         requester_id: String(profile.id),
         requester_name: profile.full_name,
         requester_email: profile.email,
@@ -243,6 +227,16 @@ const CreateRequest = () => {
               zoneName,
               requestId,
             });
+            // ✅ เก็บ "ลิงก์ไฟล์" (ไฟล์ที่แชร์แล้ว) ลง Supabase → ปุ่มดูเอกสารเปิดตรงไฟล์ ไม่เด้งหน้าเลือกโฟลเดอร์
+            if (uploadRes?.data?.fileUrl) {
+              await addAttachment({
+                request_id: requestId,
+                file_name: f.file.name,
+                file_url: uploadRes.data.fileUrl,
+                file_type: f.file.type || null,
+                file_size: f.file.size,
+              });
+            }
             if (!uploadedDriveUrl && uploadRes?.data?.folderUrl) {
               uploadedDriveUrl = uploadRes.data.folderUrl;
             }

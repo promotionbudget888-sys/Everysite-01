@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus } from 'lucide-react';
 import { apiPost } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ZoneOption {
   id: string;
@@ -54,8 +55,11 @@ export default function Register() {
     const fetchZones = async () => {
       setZonesLoading(true);
       try {
-        const res = await apiPost<unknown>({ mode: 'zones' });
-        const zoneList = normalizeZones(res.data);
+        const { data } = await supabase
+          .from('zones_public')
+          .select('id, name, sort_order')
+          .order('sort_order', { ascending: true });
+        const zoneList = normalizeZones(data);
         setZones(zoneList.length > 0 ? zoneList : FALLBACK_ZONES);
       } catch {
         setZones(FALLBACK_ZONES);
@@ -93,6 +97,38 @@ export default function Register() {
     setLoading(true);
     try {
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
+
+      // 1) สร้าง user ใน Supabase Auth (trigger handle_new_user จะสร้าง profile รออนุมัติ)
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password: password.trim(),
+        options: {
+          data: {
+            full_name: fullName,
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            zone_id: zoneId || null,
+            affiliation: affiliation || null,
+            department: department.trim() || null,
+            branch: branch.trim() || null,
+            phone: phone.trim() || null,
+            line_id: lineId.trim() || null,
+          },
+        },
+      });
+      if (signUpError) {
+        const dup = /already registered|already been registered|exists/i.test(signUpError.message);
+        toast({
+          title: 'สมัครสมาชิกไม่สำเร็จ',
+          description: dup ? 'อีเมลนี้ถูกใช้แล้ว' : signUpError.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      // pending อยู่แล้ว — ออกจาก session ที่ signUp สร้างไว้
+      await supabase.auth.signOut();
+
+      // 2) mirror ไป Google Sheet + ส่ง LINE แจ้งกลุ่มสมัครสมาชิก (ผ่าน GAS เดิม)
       const res = await apiPost({
         mode: 'user_registered',
         user_name: fullName,
@@ -111,16 +147,10 @@ export default function Register() {
         line_id: lineId.trim() || null,
       });
 
-      if (!res.success || res.data?.error) {
-        toast({
-          title: 'สมัครสมาชิกไม่สำเร็จ',
-          description: res.error || res.data?.error || 'กรุณาลองใหม่อีกครั้ง',
-          variant: 'destructive',
-        });
-        return;
+      // GAS mirror เป็น best-effort — ถ้าล้มเหลวก็ยังถือว่าสมัครสำเร็จ (Supabase คือฐานหลัก)
+      if (!res.success) {
+        console.warn('Sheet mirror (user_registered) failed:', res.error);
       }
-
-      // ✅ ไม่ส่ง LINE ที่นี่ — GAS จัดการผ่าน sendRegistrationCard() แล้ว
 
       toast({
         title: 'สมัครสมาชิกสำเร็จ',

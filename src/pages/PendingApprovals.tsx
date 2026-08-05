@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Clock, Eye, CheckCircle, XCircle, Loader2, FileText, Download, Paperclip, FolderOpen, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { apiPost } from "@/lib/api";
+import { pendingRequests, updateStatus, rejectRequest, listAttachments } from "@/lib/db";
 import { getStatusConfig } from "@/lib/statusUtils";
 
 interface Attachment {
@@ -32,8 +33,10 @@ interface Request {
   size_code: string | null;
   requester_name: string;
   requester_email: string;
+  requester_id?: string;
   requester_affiliation: string | null;
   requester_branch: string | null;
+  zone_id?: string | null;
   zone_name: string;
   zone_approver_notes: string | null;
   attachments?: Attachment[];
@@ -42,17 +45,19 @@ interface Request {
 // ✅ Component ดึง Drive URL จาก GAS แล้วเปิด
 function DriveButton({ requestId }: { requestId: string }) {
   const [loading, setLoading] = useState(false);
-  const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
   const handleOpen = async () => {
-    if (url) { window.open(url, "_blank"); return; }
     setLoading(true);
     setError(false);
     try {
+      const att = await listAttachments(requestId);
+      if (att.success && Array.isArray(att.data) && att.data.length > 0) {
+        att.data.forEach((a: { file_url: string }) => window.open(a.file_url, "_blank"));
+        return;
+      }
       const res = await apiPost({ mode: "get_drive_url", id: requestId });
       if (res.success && res.data?.drive_url) {
-        setUrl(res.data.drive_url);
         window.open(res.data.drive_url, "_blank");
       } else {
         setError(true);
@@ -105,11 +110,10 @@ export default function PendingApprovals() {
         ? "zone_review_2"
         : "";
 
-      const res = await apiPost({
-        mode: "pending",
-        zone_id: profile?.zone_id || "",
+      const res = await pendingRequests({
+        zoneId: profile?.zone_id || "",
         role: profile?.role || "",
-        status: targetStatus,
+        status: targetStatus || undefined,
       });
       if (res.success && Array.isArray(res.data)) {
         const filtered = res.data.filter((r: Request) => {
@@ -152,14 +156,23 @@ export default function PendingApprovals() {
     setProcessing(true);
     try {
       const newStatus = getNextStatus(selectedRequest.status, actionType);
-      const res = await apiPost({
-        mode: actionType === "approve" ? "update_status" : "reject",
+      const lineCard = {
         id: selectedRequest.id,
-        status: newStatus,
-        notes,
         approver_name: profile?.full_name || "-",
-        rejected_reason: actionType === "reject" ? notes : undefined,
-      });
+        title: selectedRequest.title,
+        amount: Number(selectedRequest.amount).toLocaleString(),
+        requester_name: selectedRequest.requester_name,
+        zone_id: selectedRequest.zone_id,
+      };
+      const res = actionType === "approve"
+        ? await updateStatus({
+            ...lineCard,
+            status: newStatus,
+            notes,
+            requester_id: selectedRequest.requester_id,
+            request_type: selectedRequest.request_type,
+          })
+        : await rejectRequest({ ...lineCard, rejected_reason: notes, notes });
       if (!res.success) throw new Error(res.error);
       toast.success(actionType === "approve" ? "อนุมัติคำขอเรียบร้อย" : "ปฏิเสธคำขอเรียบร้อย");
       setActionDialogOpen(false);

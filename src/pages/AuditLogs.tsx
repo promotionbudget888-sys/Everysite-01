@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, History, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { apiPost } from "@/lib/api";
+import { listAuditLogs } from "@/lib/db";
 
 interface AuditLog {
   id: string;
@@ -41,7 +41,7 @@ export default function AuditLogs() {
 
   const fetchLogs = async () => {
     setLoading(true);
-    const res = await apiPost({ mode: "audit_logs" });
+    const res = await listAuditLogs();
     if (res.success && Array.isArray(res.data)) {
       const normalized = (res.data as RawAuditLog[]).map((item, index) => {
         const createdAt = item.created_at || item.timestamp || new Date().toISOString();
