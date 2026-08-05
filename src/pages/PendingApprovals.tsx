@@ -319,7 +319,7 @@ export default function PendingApprovals() {
           {selectedRequest && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-sm text-muted-foreground">รหัสคำขอ</p><p className="font-mono">{selectedRequest.size_code != null ? String(selectedRequest.size_code) : selectedRequest.id.slice(0, 8)}</p></div>
+                <div><p className="text-sm text-muted-foreground">รหัสคำขอ</p><p className="font-mono break-all">{selectedRequest.size_code != null ? String(selectedRequest.size_code) : selectedRequest.id.slice(0, 8)}</p></div>
                 <div><p className="text-sm text-muted-foreground">สถานะ</p>{getStatusBadge(selectedRequest.status)}</div>
                 <div><p className="text-sm text-muted-foreground">ชื่อคำขอ</p><p className="font-medium">{selectedRequest.title}</p></div>
                 <div><p className="text-sm text-muted-foreground">จำนวนเงิน</p><p className="font-bold text-lg">{formatCurrency(selectedRequest.amount)}</p></div>

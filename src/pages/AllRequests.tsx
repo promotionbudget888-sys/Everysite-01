@@ -508,7 +508,7 @@ export default function AllRequests() {
                 <div><p className="text-muted-foreground">โซน</p><p className="font-medium">{selectedRequest.zone_id ? `โซน ${selectedRequest.zone_id}` : "-"}</p></div>
                 <div><p className="text-muted-foreground">สถานะ</p><div className="mt-1">{getStatusBadge(selectedRequest.status)}</div></div>
                 <div><p className="text-muted-foreground">ประเภทงบ</p><p className="font-medium">{selectedRequest.request_type || "-"}{selectedRequest.size ? ` (${selectedRequest.size})` : ""}</p></div>
-                <div><p className="text-muted-foreground">รหัส Size S</p><p className="font-medium font-mono">{selectedRequest.size_code || "-"}</p></div>
+                <div><p className="text-muted-foreground">รหัส Size S</p><p className="font-medium font-mono break-all">{selectedRequest.size_code || "-"}</p></div>
               </div>
               {selectedRequest.description && (
                 <div>

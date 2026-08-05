@@ -261,7 +261,10 @@ export default function ApprovalHistory() {
                   <TableBody>
                     {filteredRequests.map((request) => (
                       <TableRow key={request.id}>
-                        <TableCell className="font-mono text-sm text-muted-foreground">
+                        <TableCell
+                          className="font-mono text-xs text-muted-foreground max-w-[120px] truncate"
+                          title={request.size_code || request.id.slice(0, 8)}
+                        >
                           {request.size_code || request.id.slice(0, 8)}
                         </TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">
