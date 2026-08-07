@@ -43,3 +43,6 @@ coverage/
 
 # GAS deployment artifact — มีความลับ (LINE tokens / SECRET_TOKEN) วางใน Apps Script เท่านั้น
 supabase/Code.gs
+
+# ไฟล์ข้อมูลจริง (xlsx export) สำหรับสคริปต์ import/update — ไม่ควรขึ้น git
+data/
