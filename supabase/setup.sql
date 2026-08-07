@@ -225,11 +225,11 @@ DROP POLICY IF EXISTS requests_update_admin    ON public.requests;
 DROP POLICY IF EXISTS requests_update_approver ON public.requests;
 CREATE POLICY requests_select_own      ON public.requests FOR SELECT USING (requester_id = public.my_profile_id());
 CREATE POLICY requests_select_admin    ON public.requests FOR SELECT USING (public.is_admin());
-CREATE POLICY requests_select_approver ON public.requests FOR SELECT USING (public.is_approver() AND zone_id = public.my_zone());
+CREATE POLICY requests_select_approver ON public.requests FOR SELECT USING (public.is_approver());
 CREATE POLICY requests_insert_own      ON public.requests FOR INSERT WITH CHECK (requester_id = public.my_profile_id() AND public.is_approved());
 CREATE POLICY requests_update_own      ON public.requests FOR UPDATE USING (requester_id = public.my_profile_id() AND status IN ('draft','returned'));
 CREATE POLICY requests_update_admin    ON public.requests FOR UPDATE USING (public.is_admin());
-CREATE POLICY requests_update_approver ON public.requests FOR UPDATE USING (public.is_approver() AND zone_id = public.my_zone());
+CREATE POLICY requests_update_approver ON public.requests FOR UPDATE USING (public.is_approver());
 
 DROP POLICY IF EXISTS requests_delete_own   ON public.requests;
 DROP POLICY IF EXISTS requests_delete_admin ON public.requests;
@@ -248,11 +248,7 @@ CREATE POLICY attach_select_own ON public.request_attachments FOR SELECT USING (
   request_id IN (SELECT id FROM public.requests WHERE requester_id = public.my_profile_id())
 );
 CREATE POLICY attach_select_admin ON public.request_attachments FOR SELECT USING (public.is_admin());
-CREATE POLICY attach_select_approver ON public.request_attachments FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.requests r
-          WHERE r.id = request_attachments.request_id
-            AND public.is_approver() AND r.zone_id = public.my_zone())
-);
+CREATE POLICY attach_select_approver ON public.request_attachments FOR SELECT USING (public.is_approver());
 CREATE POLICY attach_insert_own ON public.request_attachments FOR INSERT WITH CHECK (
   request_id IN (SELECT id FROM public.requests WHERE requester_id = public.my_profile_id())
 );
