@@ -148,3 +148,16 @@
     }
   }
 }
+
+/* ── Print / PDF (หน้า Dashboard) ─────────────────────────────────── */
+@media print {
+  /* ซ่อน sidebar + header ตอนพิมพ์ ให้เหลือเฉพาะเนื้อหา */
+  [data-sidebar="sidebar"],
+  [data-sidebar]:not([data-slot="sidebar-inset"]),
+  header { display: none !important; }
+  main { padding: 0 !important; }
+  .print\:hidden { display: none !important; }
+  /* ให้กราฟ/การ์ดไม่ถูกตัดกลางหน้า */
+  .recharts-wrapper, table, .rounded-lg { break-inside: avoid; }
+  body { background: #fff !important; }
+}

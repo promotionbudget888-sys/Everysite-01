@@ -1,4 +1,4 @@
-import { FileText, Users, ClipboardList, History, LogOut, Settings, Trophy, Upload, Bell } from 'lucide-react';
+import { FileText, Users, ClipboardList, History, LogOut, Settings, Trophy, Upload, Bell, LayoutDashboard } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getRoleLabel } from '@/lib/auth';
@@ -54,6 +54,7 @@ export function AppSidebar() {
 
     if (profile?.role === 'admin') {
       return [
+        { title: 'Dashboard สรุปงบ', url: '/dashboard', icon: LayoutDashboard },
         { title: 'คำขอทั้งหมด', url: '/all-requests', icon: FileText },
         { title: 'จัดการผู้ใช้', url: '/users', icon: Users },
         { title: 'แจ้งเตือนการจ่าย', url: '/payment-notifications', icon: Bell },

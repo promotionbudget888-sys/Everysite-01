@@ -12,6 +12,7 @@ import AuditLogs from "./pages/AuditLogs";
 import AllRequests from "./pages/AllRequests";
 import Settings from "./pages/Settings";
 import CreateRequest from "./pages/CreateRequest";
+import Dashboard from "./pages/Dashboard";
 import EditRequest from "./pages/EditRequest";
 import MyRequests from "./pages/MyRequests";
 import PendingApprovals from "./pages/PendingApprovals";
@@ -30,7 +31,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/dashboard" element={<Navigate to="/my-requests" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             
