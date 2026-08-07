@@ -25,19 +25,24 @@ function _supa() {
   return { url: url.replace(/\/+$/, ''), key: key };
 }
 
-// ดึง id ทั้งหมดของตาราง (แบ่งหน้า 1000) → { id: true }
+// ดึง id ทั้งหมดของตาราง (แบ่งหน้า 1000 ด้วย limit/offset) → { id: true }
 function _getIds(supa, table) {
-  var ids = {}, from = 0, size = 1000;
+  var ids = {}, offset = 0, size = 1000;
   for (;;) {
-    var res = UrlFetchApp.fetch(supa.url + '/rest/v1/' + table + '?select=id', {
-      headers: { apikey: supa.key, Authorization: 'Bearer ' + supa.key, Range: from + '-' + (from + size - 1) },
-      muteHttpExceptions: true,
-    });
+    var res = UrlFetchApp.fetch(
+      supa.url + '/rest/v1/' + table + '?select=id&limit=' + size + '&offset=' + offset,
+      { headers: { apikey: supa.key, Authorization: 'Bearer ' + supa.key }, muteHttpExceptions: true }
+    );
+    var code = res.getResponseCode();
+    if (code !== 200) {
+      throw new Error('อ่าน ' + table + ' ไม่ได้ (HTTP ' + code + '): ' + res.getContentText().slice(0, 200) +
+        ' — เช็คว่า SUPABASE_SERVICE_KEY เป็น service_role key');
+    }
     var arr = JSON.parse(res.getContentText() || '[]');
     if (!arr.length) break;
     for (var i = 0; i < arr.length; i++) ids[arr[i].id] = true;
     if (arr.length < size) break;
-    from += size;
+    offset += size;
   }
   return ids;
 }
@@ -71,6 +76,8 @@ function syncNewRequestsToSupabase() {
 
   var existing = _getIds(supa, 'requests');       // id ที่มีใน Supabase แล้ว
   var profiles = _getIds(supa, 'profiles');       // เจ้าของที่มีจริง (กัน FK)
+  Logger.log('อ่านจาก Supabase → requests=' + Object.keys(existing).length + ', profiles=' + Object.keys(profiles).length +
+    (Object.keys(profiles).length === 0 ? '  ⚠️ profiles=0 แปลว่าคีย์ผิด (ต้องใช้ service_role)' : ''));
 
   var toInsert = [], skippedNoUser = 0;
   for (var i = 1; i < rows.length; i++) {
