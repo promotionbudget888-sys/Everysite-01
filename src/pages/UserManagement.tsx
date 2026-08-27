@@ -9,9 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { UserCheck, UserX, Search, Users, Clock, CheckCircle, XCircle, Edit, RefreshCw } from 'lucide-react';
+import { UserCheck, UserX, Search, Users, Clock, CheckCircle, XCircle, Edit, RefreshCw, KeyRound } from 'lucide-react';
 import { UserRole, UserStatus, getRoleLabel } from '@/lib/auth';
 import { listUsers, updateUser, setUserStatus } from '@/lib/db';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfile {
   id: string;
@@ -43,7 +44,11 @@ export default function UserManagement() {
   const [editZone, setEditZone] = useState('');
   const [editBudgetMF, setEditBudgetMF] = useState(0);
   const [editBudgetES, setEditBudgetES] = useState(0);
+  const [editUsedMF, setEditUsedMF] = useState(0);
+  const [editUsedES, setEditUsedES] = useState(0);
   const [editLineId, setEditLineId] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [settingPw, setSettingPw] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => { fetchUsers(); }, []);
@@ -78,7 +83,10 @@ export default function UserManagement() {
     setEditZone(user.zone_id ?? '');
     setEditBudgetMF(user.budget_matching_fund ?? 0);
     setEditBudgetES(user.budget_everysite ?? 0);
+    setEditUsedMF(user.used_matching_fund ?? 0);
+    setEditUsedES(user.used_everysite ?? 0);
     setEditLineId(user.line_id ?? '');
+    setNewPassword('');
     setDialogOpen(true);
   };
 
@@ -91,6 +99,8 @@ export default function UserManagement() {
         zone_id: editZone,
         budget_matching_fund: editBudgetMF,
         budget_everysite: editBudgetES,
+        used_matching_fund: editUsedMF,
+        used_everysite: editUsedES,
         line_id: editLineId,
       });
       if (res.success) {
@@ -102,6 +112,30 @@ export default function UserManagement() {
       }
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // ตั้งรหัสผ่านใหม่ให้ user (ผ่าน edge function ที่ verify admin ฝั่ง server)
+  const setPassword = async () => {
+    if (!editingUser || newPassword.length < 6) {
+      toast({ title: 'รหัสผ่านต้องอย่างน้อย 6 ตัว', variant: 'destructive' });
+      return;
+    }
+    setSettingPw(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-set-password', {
+        body: { email: editingUser.email, password: newPassword },
+      });
+      if (error || (data && data.error)) {
+        toast({ title: 'ตั้งรหัสผ่านไม่สำเร็จ', description: (data?.error || error?.message || ''), variant: 'destructive' });
+      } else {
+        toast({ title: 'ตั้งรหัสผ่านใหม่สำเร็จ', description: `${editingUser.email} ใช้รหัสใหม่ได้เลย` });
+        setNewPassword('');
+      }
+    } catch (e) {
+      toast({ title: 'ตั้งรหัสผ่านไม่สำเร็จ', description: e instanceof Error ? e.message : '', variant: 'destructive' });
+    } finally {
+      setSettingPw(false);
     }
   };
 
@@ -271,9 +305,33 @@ export default function UserManagement() {
                   <Input type="number" min={0} value={editBudgetES} onChange={e => setEditBudgetES(Number(e.target.value))} />
                 </div>
               </div>
+              {/* ใช้ไป — แยก MF/ES (ยอด "ใช้ไป" ที่แสดง = MF + ES รวมกัน) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">ใช้ไป MF (บาท)</label>
+                  <Input type="number" min={0} value={editUsedMF} onChange={e => setEditUsedMF(Number(e.target.value))} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">ใช้ไป ES (บาท)</label>
+                  <Input type="number" min={0} value={editUsedES} onChange={e => setEditUsedES(Number(e.target.value))} />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">ใช้ไปรวม: {fmtB(editUsedMF + editUsedES)}</p>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">LINE ID</label>
                 <Input placeholder="เช่น @mylineid หรือ Uxxx..." value={editLineId} onChange={e => setEditLineId(e.target.value)} />
+              </div>
+
+              {/* ตั้งรหัสผ่านใหม่ */}
+              <div className="space-y-1.5 border-t pt-3">
+                <label className="text-sm font-medium flex items-center gap-1.5"><KeyRound className="h-3.5 w-3.5" />ตั้งรหัสผ่านใหม่</label>
+                <div className="flex gap-2">
+                  <Input type="text" placeholder="รหัสผ่านใหม่ (≥6 ตัว)" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                  <Button variant="outline" onClick={setPassword} disabled={settingPw || newPassword.length < 6}>
+                    {settingPw ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'ตั้งรหัส'}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">ตั้งแล้วผู้ใช้ login ด้วยรหัสใหม่ได้ทันที (ไม่ต้องกดบันทึก)</p>
               </div>
             </div>
             <DialogFooter>
