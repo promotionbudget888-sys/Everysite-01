@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -140,7 +140,7 @@ export default function AllRequests() {
   // สถานะที่ต้อง admin ดำเนินการ
   const pendingAdminStatuses = ["submitted", "admin_finalize"];
   const allStatuses = [
-    { value: "all",           label: "ทุกสถานะ" },
+    { value: "all",           label: "ทั้งหมด" },
     { value: "submitted",     label: "รอตรวจสอบ" },
     { value: "zone_review_1", label: "รอ L1" },
     { value: "zone_review_2", label: "รอ L2" },
@@ -152,14 +152,17 @@ export default function AllRequests() {
     { value: "returned",      label: "ตีกลับ" },
   ];
 
-  const filteredRequests = requests.filter((req) => {
+  // กรองด้วย ค้นหา + โซน ก่อน (ยังไม่กรองสถานะ) เพื่อใช้นับจำนวนต่อสถานะบนแท็บ
+  const baseFiltered = requests.filter((req) => {
     const matchSearch =
       req.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (req.requester_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-    const matchStatus = filterStatus === "all" || req.status === filterStatus;
     const matchZone = filterZone === "all" || String(req.zone_id ?? "") === filterZone;
-    return matchSearch && matchStatus && matchZone;
+    return matchSearch && matchZone;
   });
+  const statusCounts: Record<string, number> = { all: baseFiltered.length };
+  baseFiltered.forEach((r) => { statusCounts[r.status] = (statusCounts[r.status] || 0) + 1; });
+  const filteredRequests = baseFiltered.filter((req) => filterStatus === "all" || req.status === filterStatus);
 
   // stats
   const stats = {
@@ -351,6 +354,17 @@ export default function AllRequests() {
           </Card>
         </div>
 
+        {/* แท็บแยกสถานะ */}
+        <Tabs value={filterStatus} onValueChange={setFilterStatus}>
+          <TabsList className="flex flex-wrap h-auto justify-start gap-1 bg-muted/60">
+            {allStatuses.map(s => (
+              <TabsTrigger key={s.value} value={s.value} className="data-[state=active]:bg-background">
+                {s.label} ({statusCounts[s.value] ?? 0})
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
         {/* Filter */}
         <Card>
           <CardContent className="pt-4 pb-4">
@@ -364,16 +378,6 @@ export default function AllRequests() {
                   className="pl-9"
                 />
               </div>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-full sm:w-52">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {allStatuses.map(s => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <ZoneFilter value={filterZone} onChange={setFilterZone} />
               <Button variant="outline" onClick={() => { setSearchTerm(""); setFilterStatus("all"); setFilterZone("all"); }}>ล้าง</Button>
             </div>
