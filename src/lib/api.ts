@@ -1,26 +1,8 @@
-import { getSavedProfile } from '@/lib/auth';
+import { supabase } from '@/integrations/supabase/client';
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbztj1lo4_m8LEa6wIiE7sRdzcuoMf7_0xEaWA8zbbUAT_HhhTRGedlnsp7hXon4qleMkw/exec";
-const SECRET_TOKEN = "g7Jd93LsKqV4mX2pYtR8nH1bC6wZ5eT0uQ9aF3kL2sV7dN4pX6cM8rT1yW0zU5h";
-
-const AUDIT_SKIP_MODES = new Set([
-  "",
-  "login",
-  "register",
-  "user_registered",
-  "users",
-  "list_users",
-  "zones",
-  "list",
-  "pending",
-  "get",
-  "audit_logs",
-  "log_audit",
-  "notify_line",
-  "send_line",
-  "upload_file",
-  "upload_attachment",
-]);
+// เรียก Google Apps Script ผ่าน Supabase Edge Function "google-script-proxy"
+// proxy จะใส่ SECRET_TOKEN ให้ฝั่ง server → token ไม่หลุดมาอยู่ใน bundle ของ frontend
+// (เดิม api.ts ยิง GAS ตรง ๆ พร้อม token ที่ hardcode = ช่องโหว่)
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -28,124 +10,22 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
-function getRequestMode(body: Record<string, any>): string {
-  return String(body.mode ?? body.action ?? "").trim();
-}
-
-function shouldLogAudit(mode: string): boolean {
-  return !AUDIT_SKIP_MODES.has(mode);
-}
-
-function inferTargetType(mode: string): string {
-  if (mode.includes("user")) return "user";
-  if (
-    mode.includes("request") ||
-    ["create", "update", "delete", "approve", "reject", "update_status", "set_competing", "set_paid"].includes(mode)
-  ) {
-    return "request";
-  }
-  return "system";
-}
-
-function buildAuditPayload(
-  mode: string,
+export async function apiPost<T = any>(
   body: Record<string, any>
-): Record<string, any> {
-  const profile = getSavedProfile();
-  const detailParts: string[] = [];
-
-  if (body.status !== undefined) detailParts.push(`status=${body.status}`);
-  if (body.role !== undefined) detailParts.push(`role=${body.role}`);
-  if (body.budget_matching_fund !== undefined || body.budget_everysite !== undefined) {
-    detailParts.push(
-      `budget_mf=${Number(body.budget_matching_fund ?? 0)}, budget_es=${Number(body.budget_everysite ?? 0)}`
-    );
-  }
-
-  const targetId = body.target_id ?? body.id ?? body.request_id ?? body.user_id ?? null;
-  const detailWithAction =
-    mode +
-    (detailParts.length > 0
-      ? ": " + detailParts.join(", ")
-      : body.title
-      ? ": " + body.title
-      : "");
-
-  return {
-    mode: "log_audit",
-    action: "log_audit",
-    _token: SECRET_TOKEN,
-    actor_name: profile?.full_name || "System",
-    actor_role: profile?.role || "system",
-    target_type: inferTargetType(mode),
-    target_id: targetId !== null && targetId !== undefined ? String(targetId) : "",
-    detail: detailWithAction,
-    timestamp: new Date().toISOString(),
-  };
-}
-
-// ── เรียก GAS โดยตรง (text/plain เพื่อหลีกเลี่ยง CORS preflight) ──────────────
-
-async function callGAS<T = any>(
-  payload: Record<string, any>
 ): Promise<ApiResponse<T>> {
-  const body = { ...payload, _token: SECRET_TOKEN };
-
   try {
-    const res = await fetch(GAS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      return { success: false, error: `HTTP ${res.status}` };
-    }
-
-    const text = await res.text();
-    let json: any;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      return { success: false, error: "Response is not JSON" };
-    }
-
-    if (!json?.success) {
-      return { success: false, error: json?.error || "Request failed" };
-    }
-
-    return { success: true, data: json.data as T };
+    const { data, error } = await supabase.functions.invoke('google-script-proxy', { body });
+    if (error) return { success: false, error: error.message };
+    if (data && typeof data === 'object') return data as ApiResponse<T>;
+    return { success: false, error: 'ไม่มีการตอบกลับจาก proxy' };
   } catch (err) {
-    console.error("GAS error:", err);
+    console.error('GAS proxy error:', err);
     return { success: false, error: String(err) };
   }
 }
 
-// ── Audit Log (fire-and-forget) ───────────────────────────────────────────────
-
-function sendAuditLogIfNeeded(mode: string, body: Record<string, any>) {
-  if (!shouldLogAudit(mode)) return;
-  const payload = buildAuditPayload(mode, body);
-  callGAS(payload).catch((err) => console.warn("Audit log failed:", err));
-}
-
-// ── Public API ────────────────────────────────────────────────────────────────
-
 export async function apiGet<T = any>(
   params: Record<string, string>
 ): Promise<ApiResponse<T>> {
-  return callGAS<T>(params);
-}
-
-export async function apiPost<T = any>(
-  body: Record<string, any>
-): Promise<ApiResponse<T>> {
-  const mode = getRequestMode(body);
-  const result = await callGAS<T>(body);
-
-  if (result.success) {
-    sendAuditLogIfNeeded(mode, body);
-  }
-
-  return result;
+  return apiPost<T>(params);
 }

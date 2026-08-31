@@ -1,116 +1,49 @@
-const corsHeaders = {
+// Edge Function: google-script-proxy
+// ส่งต่อคำขอไปยัง Google Apps Script โดยใส่ SECRET_TOKEN ให้ "ฝั่ง server"
+// → token ไม่หลุดมาอยู่ใน frontend อีกต่อไป
+// เรียกได้เฉพาะผู้ใช้ที่ล็อกอินแล้ว (verify JWT เปิดไว้ตอน deploy)
+//
+// Deploy: supabase functions deploy google-script-proxy
+//   หรือ Dashboard → Edge Functions → Deploy a new function → ชื่อ google-script-proxy → วางโค้ดนี้
+// ต้องตั้ง Secrets 2 ตัว (Edge Functions → Secrets / Manage secrets):
+//   GOOGLE_APPS_SCRIPT_URL = https://script.google.com/macros/s/.../exec
+//   GAS_SECRET_TOKEN       = <SECRET_TOKEN เดิมใน CONFIG ของ GAS>
+
+const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-app-token",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "application/json",
-    },
-  });
-}
+const json = (b: unknown, s = 200) =>
+  new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   try {
-    const scriptUrl =
-      Deno.env.get("GOOGLE_APPS_SCRIPT_URL") ||
-      Deno.env.get("VITE_GOOGLE_SCRIPT_URL") ||
-      Deno.env.get("GOOGLE_APPS_SCRIPT_REQUEST_URL");
-
-    if (!scriptUrl) {
-      return jsonResponse(
-        { success: false, error: "Google Apps Script URL is not configured" },
-        500
-      );
+    const GAS_URL = Deno.env.get("GOOGLE_APPS_SCRIPT_URL");
+    const TOKEN = Deno.env.get("GAS_SECRET_TOKEN");
+    if (!GAS_URL || !TOKEN) {
+      return json({ success: false, error: "proxy ยังไม่ตั้งค่า (GOOGLE_APPS_SCRIPT_URL / GAS_SECRET_TOKEN)" }, 500);
     }
 
-    const requestJson = await req.json().catch(() => ({}));
-    const method = requestJson?.method === "GET" ? "GET" : "POST";
-    const payload =
-      requestJson && typeof requestJson.payload === "object" && requestJson.payload !== null
-        ? requestJson.payload
-        : {};
+    const body = await req.json().catch(() => ({}));
+    const payload = { ...body, _token: TOKEN };
 
-    const appToken = req.headers.get("x-app-token");
-
-    // Inject token into payload body (headers get stripped on GAS redirect)
-    const enrichedPayload: Record<string, any> = { ...payload };
-    if (appToken) {
-      enrichedPayload._token = appToken;
-    }
-
-    let upstreamResponse: Response;
-    if (method === "GET") {
-      const url = new URL(scriptUrl);
-      Object.entries(enrichedPayload).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          url.searchParams.set(key, String(value));
-        }
-      });
-
-      upstreamResponse = await fetch(url.toString(), { method: "GET" });
-    } else {
-      upstreamResponse = await fetch(scriptUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(enrichedPayload),
-      });
-    }
-
-    const text = await upstreamResponse.text();
-    let parsed: unknown = text;
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // เลี่ยง CORS preflight ฝั่ง GAS
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text();
+    let parsed: unknown;
     try {
       parsed = text ? JSON.parse(text) : null;
     } catch {
-      // keep text response
+      return json({ success: false, error: "GAS ตอบกลับไม่ใช่ JSON (เช็ก URL /exec และ deploy เวอร์ชันล่าสุด)" }, 502);
     }
-
-    const isHtmlResponse =
-      (typeof parsed === "string" && parsed.trimStart().startsWith("<!DOCTYPE html")) ||
-      (upstreamResponse.headers.get("content-type") || "").includes("text/html");
-
-    if (isHtmlResponse) {
-      const runtimeError =
-        typeof parsed === "string"
-          ? parsed.match(/ReferenceError:[^<]+|TypeError:[^<]+|SyntaxError:[^<]+/)?.[0]
-          : undefined;
-
-      return jsonResponse(
-        {
-          success: false,
-          error:
-            runtimeError ||
-            "Google Apps Script ตอบกลับเป็นหน้า HTML (URL ไม่ถูกต้องหรือสคริปต์มี error) กรุณาใช้ลิงก์ Web App ที่ลงท้าย /exec และ Deploy เวอร์ชันล่าสุด",
-        },
-        502
-      );
-    }
-
-    if (!upstreamResponse.ok) {
-      const errorMessage =
-        typeof parsed === "object" && parsed !== null && "error" in parsed
-          ? String((parsed as { error: unknown }).error)
-          : `HTTP ${upstreamResponse.status}`;
-
-      return jsonResponse({ success: false, error: errorMessage }, upstreamResponse.status);
-    }
-
-    return jsonResponse({ success: true, data: parsed });
-  } catch (error) {
-    return jsonResponse(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown proxy error",
-      },
-      500
-    );
+    // ส่งต่อ response ของ GAS ตรง ๆ ({ success, data, error })
+    return json(parsed, 200);
+  } catch (e) {
+    return json({ success: false, error: e instanceof Error ? e.message : "proxy error" }, 500);
   }
 });

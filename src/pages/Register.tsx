@@ -125,10 +125,8 @@ export default function Register() {
         });
         return;
       }
-      // pending อยู่แล้ว — ออกจาก session ที่ signUp สร้างไว้
-      await supabase.auth.signOut();
-
-      // 2) mirror ไป Google Sheet + ส่ง LINE แจ้งกลุ่มสมัครสมาชิก (ผ่าน GAS เดิม)
+      // 2) mirror ไป Google Sheet + ส่ง LINE (ผ่าน GAS proxy) — ต้องยิงก่อน signOut
+      //    เพราะ proxy ต้องมี session ที่ล็อกอินอยู่ (best-effort: ล้มก็ยังสมัครสำเร็จ)
       const res = await apiPost({
         mode: 'user_registered',
         user_name: fullName,
@@ -146,11 +144,10 @@ export default function Register() {
         phone: phone.trim() || null,
         line_id: lineId.trim() || null,
       });
+      if (!res.success) console.warn('Sheet mirror (user_registered) failed:', res.error);
 
-      // GAS mirror เป็น best-effort — ถ้าล้มเหลวก็ยังถือว่าสมัครสำเร็จ (Supabase คือฐานหลัก)
-      if (!res.success) {
-        console.warn('Sheet mirror (user_registered) failed:', res.error);
-      }
+      // pending อยู่แล้ว — ออกจาก session ที่ signUp สร้างไว้
+      await supabase.auth.signOut();
 
       toast({
         title: 'สมัครสมาชิกสำเร็จ',
