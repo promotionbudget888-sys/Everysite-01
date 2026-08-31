@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { UserCheck, UserX, Search, Users, Clock, CheckCircle, XCircle, Edit, RefreshCw, KeyRound } from 'lucide-react';
+import { UserCheck, UserX, Search, Users, Clock, CheckCircle, XCircle, Edit, RefreshCw, KeyRound, Trash2 } from 'lucide-react';
 import { UserRole, UserStatus, getRoleLabel } from '@/lib/auth';
 import { listUsers, updateUser, setUserStatus } from '@/lib/db';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,7 +39,7 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('pending');
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editRole, setEditRole] = useState<UserRole>('requester');
   const [editZone, setEditZone] = useState('');
@@ -50,6 +51,9 @@ export default function UserManagement() {
   const [newPassword, setNewPassword] = useState('');
   const [settingPw, setSettingPw] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UserProfile | null>(null);
+  const [deleteReqCount, setDeleteReqCount] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { fetchUsers(); }, []);
 
@@ -123,8 +127,8 @@ export default function UserManagement() {
     }
     setSettingPw(true);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-set-password', {
-        body: { email: editingUser.email, password: newPassword },
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'set_password', email: editingUser.email, password: newPassword },
       });
       if (error || (data && data.error)) {
         toast({ title: 'ตั้งรหัสผ่านไม่สำเร็จ', description: (data?.error || error?.message || ''), variant: 'destructive' });
@@ -136,6 +140,35 @@ export default function UserManagement() {
       toast({ title: 'ตั้งรหัสผ่านไม่สำเร็จ', description: e instanceof Error ? e.message : '', variant: 'destructive' });
     } finally {
       setSettingPw(false);
+    }
+  };
+
+  // เปิด dialog ยืนยันลบ + ดึงจำนวนคำขอของผู้ใช้ (เพื่อเตือน)
+  const openDelete = async (user: UserProfile) => {
+    setDeleteTarget(user);
+    setDeleteReqCount(null);
+    const { count } = await supabase.from('requests').select('id', { count: 'exact', head: true }).eq('requester_id', user.id);
+    setDeleteReqCount(count ?? 0);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'delete_user', email: deleteTarget.email },
+      });
+      if (error || (data && data.error)) {
+        toast({ title: 'ลบไม่สำเร็จ', description: (data?.error || error?.message || ''), variant: 'destructive' });
+      } else {
+        toast({ title: 'ลบผู้ใช้แล้ว', description: deleteTarget.email });
+        setDeleteTarget(null);
+        fetchUsers();
+      }
+    } catch (e) {
+      toast({ title: 'ลบไม่สำเร็จ', description: e instanceof Error ? e.message : '', variant: 'destructive' });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -186,21 +219,19 @@ export default function UserManagement() {
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">ใช้ไปรวม</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{fmtB(totalUsed)}</div></CardContent></Card>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="ค้นหาชื่อหรืออีเมล..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
-          </div>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-full sm:w-48"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ทุกสถานะ ({users.length})</SelectItem>
-              <SelectItem value="pending">รออนุมัติ ({pending})</SelectItem>
-              <SelectItem value="approved">อนุมัติแล้ว ({approved})</SelectItem>
-              <SelectItem value="rejected">ปฏิเสธ ({rejected})</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={() => { setSearchTerm(''); setFilterStatus('all'); }}>ล้าง</Button>
+        {/* แท็บแยกสถานะ */}
+        <Tabs value={filterStatus} onValueChange={setFilterStatus}>
+          <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
+            <TabsTrigger value="pending">รออนุมัติ ({pending})</TabsTrigger>
+            <TabsTrigger value="approved">อนุมัติแล้ว ({approved})</TabsTrigger>
+            <TabsTrigger value="rejected">ปฏิเสธ ({rejected})</TabsTrigger>
+            <TabsTrigger value="all">ทั้งหมด ({users.length})</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="ค้นหาชื่อหรืออีเมล..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
         </div>
 
         <Card>
@@ -253,6 +284,9 @@ export default function UserManagement() {
                           </>}
                           <Button size="sm" variant="outline" onClick={() => openEdit(user)}>
                             <Edit className="h-3 w-3 mr-1" />แก้ไข
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:bg-destructive/10" onClick={() => openDelete(user)}>
+                            <Trash2 className="h-3 w-3 mr-1" />ลบ
                           </Button>
                         </div>
                       </TableCell>
@@ -338,6 +372,39 @@ export default function UserManagement() {
               <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={!!actionLoading}>ยกเลิก</Button>
               <Button onClick={saveEdit} disabled={!!actionLoading}>
                 {actionLoading ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />กำลังบันทึก...</> : 'บันทึก'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* ยืนยันลบผู้ใช้ */}
+        <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-destructive flex items-center gap-2"><Trash2 className="h-5 w-5" />ยืนยันลบผู้ใช้</DialogTitle>
+              <DialogDescription>ลบบัญชีนี้ถาวร กู้คืนไม่ได้</DialogDescription>
+            </DialogHeader>
+            {deleteTarget && (
+              <div className="space-y-3">
+                <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+                  <p className="font-medium">{deleteTarget.full_name}</p>
+                  <p className="text-muted-foreground">{deleteTarget.email} · {getRoleLabel(deleteTarget.role)}</p>
+                </div>
+                {deleteReqCount === null ? (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5"><RefreshCw className="h-3 w-3 animate-spin" />กำลังตรวจสอบคำขอ...</p>
+                ) : deleteReqCount > 0 ? (
+                  <p className="text-sm text-destructive bg-destructive/10 rounded-md p-2.5">
+                    ⚠️ ผู้ใช้นี้มี <b>{deleteReqCount}</b> คำขอ — ลบแล้ว<b>คำขอทั้งหมดจะถูกลบตามไปด้วย</b>
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">ผู้ใช้นี้ไม่มีคำขอ</p>
+                )}
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>ยกเลิก</Button>
+              <Button variant="destructive" onClick={confirmDelete} disabled={deleting || deleteReqCount === null}>
+                {deleting ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />กำลังลบ...</> : <><Trash2 className="h-4 w-4 mr-2" />ลบถาวร</>}
               </Button>
             </DialogFooter>
           </DialogContent>
