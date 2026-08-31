@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { apiPost } from "@/lib/api";
 import { listRequests, listUsers, updateStatus, rejectRequest, deleteRequest } from "@/lib/db";
+import { ZoneFilter } from "@/components/ZoneFilter";
 import { getStatusConfig } from "@/lib/statusUtils";
 
 interface Request {
@@ -101,6 +102,7 @@ export default function AllRequests() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterZone, setFilterZone] = useState<string>("all");
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
@@ -155,7 +157,8 @@ export default function AllRequests() {
       req.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (req.requester_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchStatus = filterStatus === "all" || req.status === filterStatus;
-    return matchSearch && matchStatus;
+    const matchZone = filterZone === "all" || String(req.zone_id ?? "") === filterZone;
+    return matchSearch && matchStatus && matchZone;
   });
 
   // stats
@@ -371,7 +374,8 @@ export default function AllRequests() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" onClick={() => { setSearchTerm(""); setFilterStatus("all"); }}>ล้าง</Button>
+              <ZoneFilter value={filterZone} onChange={setFilterZone} />
+              <Button variant="outline" onClick={() => { setSearchTerm(""); setFilterStatus("all"); setFilterZone("all"); }}>ล้าง</Button>
             </div>
           </CardContent>
         </Card>

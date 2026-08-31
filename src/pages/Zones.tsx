@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Users, Wallet, Edit, Save, Loader2 } from "lucide-react";
 import { UserStatus, getStatusLabel } from "@/lib/auth";
 import { listUsers, updateUser } from "@/lib/db";
+import { ZoneFilter } from "@/components/ZoneFilter";
 
 interface UserRow {
   id: string;
@@ -40,6 +41,7 @@ export default function Zones() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAffiliation, setFilterAffiliation] = useState<string>("all");
+  const [filterZone, setFilterZone] = useState<string>("all");
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [budgetMF, setBudgetMF] = useState("");
@@ -71,9 +73,10 @@ export default function Zones() {
     return users.filter((u) => {
       const matchSearch = u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase());
       const matchAff = filterAffiliation === "all" || u.affiliation === filterAffiliation;
-      return matchSearch && matchAff;
+      const matchZone = filterZone === "all" || String(u.zone_id ?? "") === filterZone;
+      return matchSearch && matchAff && matchZone;
     });
-  }, [users, searchTerm, filterAffiliation]);
+  }, [users, searchTerm, filterAffiliation, filterZone]);
 
   const summary = useMemo(() => {
     let totalMF = 0, totalES = 0, usedMF = 0, usedES = 0;
@@ -145,7 +148,8 @@ export default function Zones() {
                 <SelectTrigger><SelectValue placeholder="สังกัด" /></SelectTrigger>
                 <SelectContent><SelectItem value="all">ทุกสังกัด</SelectItem>{affiliations.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
               </Select>
-              <Button variant="outline" onClick={() => { setSearchTerm(""); setFilterAffiliation("all"); }}>ล้างตัวกรอง</Button>
+              <ZoneFilter value={filterZone} onChange={setFilterZone} className="w-full" />
+              <Button variant="outline" onClick={() => { setSearchTerm(""); setFilterAffiliation("all"); setFilterZone("all"); }}>ล้างตัวกรอง</Button>
             </div>
           </CardContent>
         </Card>

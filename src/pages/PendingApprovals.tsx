@@ -11,6 +11,7 @@ import { Clock, Eye, CheckCircle, XCircle, Loader2, FileText, Download, Papercli
 import { toast } from "sonner";
 import { apiPost } from "@/lib/api";
 import { pendingRequests, updateStatus, rejectRequest, listAttachments } from "@/lib/db";
+import { ZoneFilter } from "@/components/ZoneFilter";
 import { getStatusConfig } from "@/lib/statusUtils";
 
 interface Attachment {
@@ -85,6 +86,7 @@ function DriveButton({ requestId }: { requestId: string }) {
 export default function PendingApprovals() {
   const { profile } = useAuth();
   const [requests, setRequests] = useState<Request[]>([]);
+  const [zoneFilter, setZoneFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -222,6 +224,8 @@ export default function PendingApprovals() {
     );
   };
 
+  const displayed = zoneFilter === "all" ? requests : requests.filter((r) => String(r.zone_id ?? "") === zoneFilter);
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -244,11 +248,14 @@ export default function PendingApprovals() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>รายการคำขอ</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
+            <CardTitle>รายการคำขอ ({displayed.length})</CardTitle>
+            <ZoneFilter value={zoneFilter} onChange={setZoneFilter} />
+          </CardHeader>
           <CardContent>
             {loading ? (
               <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-            ) : requests.length === 0 ? (
+            ) : displayed.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">ไม่มีคำขอรออนุมัติ</p>
             ) : (
               <div className="overflow-x-auto">
@@ -264,7 +271,7 @@ export default function PendingApprovals() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {requests.map((request) => {
+                    {displayed.map((request) => {
                       const sizeCodeStr = request.size_code != null ? String(request.size_code) : "";
                       const firstCode = sizeCodeStr
                         ? sizeCodeStr.split(",")[0].trim()

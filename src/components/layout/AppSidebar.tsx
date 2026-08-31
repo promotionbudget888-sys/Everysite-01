@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import { FileText, Users, ClipboardList, History, LogOut, Settings, Trophy, Upload, Bell, LayoutDashboard } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getRoleLabel } from '@/lib/auth';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +24,36 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile, logout } = useAuth();
+
+  // จำนวนงานค้างต่อเมนู (refresh ทุก 60 วิ)
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!profile) return;
+    let active = true;
+    const load = async () => {
+      const c: Record<string, number> = {};
+      try {
+        if (profile.role === 'admin') {
+          const [r, u] = await Promise.all([
+            supabase.from('requests').select('id', { count: 'exact', head: true }).in('status', ['submitted', 'admin_finalize']),
+            supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+          ]);
+          c['/all-requests'] = r.count ?? 0;
+          c['/users'] = u.count ?? 0;
+        } else if (profile.role === 'zone_approver_1') {
+          const { count } = await supabase.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'zone_review_1');
+          c['/pending-approvals'] = count ?? 0;
+        } else if (profile.role === 'zone_approver_2') {
+          const { count } = await supabase.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'zone_review_2');
+          c['/pending-approvals'] = count ?? 0;
+        }
+      } catch { /* เงียบไว้ ไม่ให้ล้ม sidebar */ }
+      if (active) setCounts(c);
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => { active = false; clearInterval(t); };
+  }, [profile?.role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogout = () => {
     logout();
@@ -103,6 +135,11 @@ export function AppSidebar() {
                   >
                     <item.icon className="w-4 h-4" />
                     <span>{item.title}</span>
+                    {counts[item.url] > 0 && (
+                      <Badge className="ml-auto bg-destructive text-destructive-foreground hover:bg-destructive h-5 min-w-5 px-1.5 justify-center rounded-full text-xs">
+                        {counts[item.url]}
+                      </Badge>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

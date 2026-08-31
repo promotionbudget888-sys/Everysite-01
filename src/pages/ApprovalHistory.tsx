@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CheckCircle, XCircle, Eye, Loader2, Search, History, RefreshCw, FolderOpen, ExternalLink } from "lucide-react";
 import { apiPost } from "@/lib/api";
 import { listRequests, listAttachments } from "@/lib/db";
+import { ZoneFilter } from "@/components/ZoneFilter";
 import { getStatusConfig } from "@/lib/statusUtils";
 
 function DriveButton({ requestId }: { requestId: string }) {
@@ -81,6 +82,7 @@ export default function ApprovalHistory() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [zoneFilter, setZoneFilter] = useState<string>("all");
 
   // ✅ แก้: ดึงข้อมูลทันทีที่ profile พร้อม ไม่ต้องรอ zone_id
   useEffect(() => {
@@ -155,7 +157,8 @@ export default function ApprovalHistory() {
       r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.requester_name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || r.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesZone = zoneFilter === "all" || String(r.zone_id ?? "") === zoneFilter;
+    return matchesSearch && matchesStatus && matchesZone;
   });
 
   const stats = {
@@ -228,7 +231,8 @@ export default function ApprovalHistory() {
                   <SelectItem value="rejected">ปฏิเสธ</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" onClick={() => { setSearchTerm(""); setStatusFilter("all"); }}>
+              <ZoneFilter value={zoneFilter} onChange={setZoneFilter} />
+              <Button variant="outline" onClick={() => { setSearchTerm(""); setStatusFilter("all"); setZoneFilter("all"); }}>
                 ล้าง
               </Button>
             </div>

@@ -14,6 +14,7 @@ import { UserCheck, UserX, Search, Users, Clock, CheckCircle, XCircle, Edit, Ref
 import { UserRole, UserStatus, getRoleLabel } from '@/lib/auth';
 import { listUsers, updateUser, setUserStatus } from '@/lib/db';
 import { supabase } from '@/integrations/supabase/client';
+import { ZoneFilter } from '@/components/ZoneFilter';
 
 interface UserProfile {
   id: string;
@@ -40,6 +41,7 @@ export default function UserManagement() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('pending');
+  const [filterZone, setFilterZone] = useState('all');
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editRole, setEditRole] = useState<UserRole>('requester');
   const [editZone, setEditZone] = useState('');
@@ -176,7 +178,8 @@ export default function UserManagement() {
     const s = searchTerm.toLowerCase();
     const matchSearch = u.full_name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s);
     const matchStatus = filterStatus === 'all' || u.status === filterStatus;
-    return matchSearch && matchStatus;
+    const matchZone = filterZone === 'all' || String(u.zone_id ?? '') === filterZone;
+    return matchSearch && matchStatus && matchZone;
   });
 
   const fmt  = (n: number) => (n ?? 0).toLocaleString('th-TH');
@@ -229,9 +232,12 @@ export default function UserManagement() {
           </TabsList>
         </Tabs>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="ค้นหาชื่อหรืออีเมล..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="ค้นหาชื่อหรืออีเมล..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
+          </div>
+          <ZoneFilter value={filterZone} onChange={setFilterZone} />
         </div>
 
         <Card>

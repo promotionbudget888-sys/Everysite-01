@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Bell, Search, RefreshCw, Send, CheckCircle, Loader2, BanknoteIcon } from "lucide-react";
 import { apiPost } from "@/lib/api";
 import { listRequests, listUsers } from "@/lib/db";
+import { ZoneFilter } from "@/components/ZoneFilter";
 import { useToast } from "@/hooks/use-toast";
 
 interface Request {
@@ -39,6 +40,7 @@ export default function PaymentNotifications() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterZone, setFilterZone] = useState("all");
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
@@ -145,10 +147,13 @@ export default function PaymentNotifications() {
     }
   };
 
-  const filtered = requests.filter(r =>
-    r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.requester_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = requests.filter(r => {
+    const matchSearch =
+      r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.requester_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchZone = filterZone === "all" || String(r.zone_id ?? "") === filterZone;
+    return matchSearch && matchZone;
+  });
 
   const fmt = (n: number) => `฿${Number(n).toLocaleString("th-TH")}`;
   const fmtDate = (s: string) => {
@@ -219,14 +224,17 @@ export default function PaymentNotifications() {
         </div>
 
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="ค้นหาชื่อโครงการ หรือผู้ขอ..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="ค้นหาชื่อโครงการ หรือผู้ขอ..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <ZoneFilter value={filterZone} onChange={setFilterZone} />
         </div>
 
         {/* Table */}
