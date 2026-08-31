@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { updateUser } from "@/lib/db";
+import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, Loader2, Repeat } from "lucide-react";
 
 interface BudgetTransferDialogProps {
@@ -32,15 +32,12 @@ export function BudgetTransferDialog({ profileId, matchingFundRemaining, matchin
     if (!isValid) return;
     setIsTransferring(true);
     try {
-      // Use update_user to adjust both budget columns
+      // ใช้ RPC ที่ตรวจงบคงเหลือฝั่ง server + ผ่าน guard ที่ล็อกงบ
+      const { error } = await supabase.rpc("transfer_matching_to_everysite", { p_amount: transferAmount });
+      if (error) throw new Error(error.message || "ไม่สามารถโอนงบได้");
+
       const newMF = matchingFundTotal - transferAmount;
       const newES = everysiteTotal + transferAmount;
-      const res = await updateUser(String(profileId), {
-        budget_matching_fund: newMF,
-        budget_everysite: newES,
-      });
-      if (!res.success) throw new Error(res.error || "ไม่สามารถโอนงบได้");
-
       toast({ title: "โอนงบสำเร็จ", description: `โอน ฿${formatMoney(transferAmount)} จาก Matching Fund ไป Everysite แล้ว` });
       setAmount("");
       setOpen(false);
