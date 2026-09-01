@@ -42,7 +42,6 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('pending');
   const [filterZone, setFilterZone] = useState('all');
-  const [filterRole, setFilterRole] = useState('all'); // all | requester | admin | me | zone_approver_1 | zone_approver_2
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editRole, setEditRole] = useState<UserRole>('requester');
   const [editZone, setEditZone] = useState('');
@@ -175,15 +174,21 @@ export default function UserManagement() {
     }
   };
 
+  // แท็บเดียวใช้ได้ทั้งกรองสถานะ และกรองบทบาท
+  const STATUS_TABS = ['all', 'pending', 'approved', 'rejected'];
   const filtered = users.filter((u) => {
     const s = searchTerm.toLowerCase();
     const matchSearch = u.full_name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s);
-    const matchStatus = filterStatus === 'all' || u.status === filterStatus;
+    const matchTab =
+      filterStatus === 'all'
+        ? true
+        : STATUS_TABS.includes(filterStatus)
+          ? u.status === filterStatus
+          : filterStatus === 'me'
+            ? u.email?.toLowerCase() === profile?.email?.toLowerCase()
+            : u.role === filterStatus;
     const matchZone = filterZone === 'all' || String(u.zone_id ?? '') === filterZone;
-    const matchRole =
-      filterRole === 'all' ||
-      (filterRole === 'me' ? u.email?.toLowerCase() === profile?.email?.toLowerCase() : u.role === filterRole);
-    return matchSearch && matchStatus && matchZone && matchRole;
+    return matchSearch && matchTab && matchZone;
   });
 
   const fmt  = (n: number) => (n ?? 0).toLocaleString('th-TH');
@@ -198,6 +203,10 @@ export default function UserManagement() {
   const pending  = users.filter(u => u.status === 'pending').length;
   const approved = users.filter(u => u.status === 'approved').length;
   const rejected = users.filter(u => u.status === 'rejected').length;
+  const cAdmin = users.filter(u => u.role === 'admin').length;
+  const cL1    = users.filter(u => u.role === 'zone_approver_1').length;
+  const cL2    = users.filter(u => u.role === 'zone_approver_2').length;
+  const cMe    = users.filter(u => u.email?.toLowerCase() === profile?.email?.toLowerCase()).length;
   const totalMF   = users.reduce((s, u) => s + (u.budget_matching_fund ?? 0), 0);
   const totalES   = users.reduce((s, u) => s + (u.budget_everysite ?? 0), 0);
   const totalUsed = users.reduce((s, u) => s + (u.used_matching_fund ?? 0) + (u.used_everysite ?? 0), 0);
@@ -228,11 +237,16 @@ export default function UserManagement() {
 
         {/* แท็บแยกสถานะ */}
         <Tabs value={filterStatus} onValueChange={setFilterStatus}>
-          <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
+          <TabsList className="w-full h-auto flex flex-wrap justify-start gap-1">
             <TabsTrigger value="pending">รออนุมัติ ({pending})</TabsTrigger>
             <TabsTrigger value="approved">อนุมัติแล้ว ({approved})</TabsTrigger>
             <TabsTrigger value="rejected">ปฏิเสธ ({rejected})</TabsTrigger>
             <TabsTrigger value="all">ทั้งหมด ({users.length})</TabsTrigger>
+            <span className="mx-1 self-center text-muted-foreground/40">|</span>
+            <TabsTrigger value="admin">ผู้ดูแลระบบ ({cAdmin})</TabsTrigger>
+            <TabsTrigger value="me">👑 ฉัน ({cMe})</TabsTrigger>
+            <TabsTrigger value="zone_approver_1">ผู้อนุมัติ L1 ({cL1})</TabsTrigger>
+            <TabsTrigger value="zone_approver_2">ผู้อนุมัติ L2 ({cL2})</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -242,19 +256,6 @@ export default function UserManagement() {
             <Input placeholder="ค้นหาชื่อหรืออีเมล..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
           </div>
           <ZoneFilter value={filterZone} onChange={setFilterZone} />
-          <Select value={filterRole} onValueChange={setFilterRole}>
-            <SelectTrigger className="w-full sm:w-52">
-              <SelectValue placeholder="บทบาท" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ทุกบทบาท</SelectItem>
-              <SelectItem value="me">👑 ฉัน</SelectItem>
-              <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
-              <SelectItem value="zone_approver_1">ผู้อนุมัติ L1</SelectItem>
-              <SelectItem value="zone_approver_2">ผู้อนุมัติ L2</SelectItem>
-              <SelectItem value="requester">ผู้ขอใช้งบ</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         <Card>
