@@ -8,6 +8,7 @@
 // ต้องตั้ง Secrets 2 ตัว (Edge Functions → Secrets / Manage secrets):
 //   GOOGLE_APPS_SCRIPT_URL = https://script.google.com/macros/s/.../exec
 //   GAS_SECRET_TOKEN       = <SECRET_TOKEN เดิมใน CONFIG ของ GAS>
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +26,15 @@ Deno.serve(async (req) => {
     if (!GAS_URL || !TOKEN) {
       return json({ success: false, error: "proxy ยังไม่ตั้งค่า (GOOGLE_APPS_SCRIPT_URL / GAS_SECRET_TOKEN)" }, 500);
     }
+
+    // ต้องเป็นผู้ใช้ที่ล็อกอินจริง (verify_jwt ปล่อย anon key ผ่าน — ต้องเช็ก getUser เอง)
+    const caller = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } }
+    );
+    const { data: { user } } = await caller.auth.getUser();
+    if (!user) return json({ success: false, error: "unauthorized" }, 401);
 
     const body = await req.json().catch(() => ({}));
     const payload = { ...body, _token: TOKEN };

@@ -1,5 +1,13 @@
-project_id = "vjlirdirqrzuzzljaixt"
+project_id = "rxbyxwxrzqldgkwinqmb"
 
+# ต้อง login ก่อนถึงเรียกได้ (กันคนนอกยิง GAS / จัดการผู้ใช้)
+[functions.google-script-proxy]
+verify_jwt = true
+
+[functions.admin-users]
+verify_jwt = true
+
+# ของเก่า (ไม่ได้ใช้แล้ว)
 [functions.google-sheets]
 verify_jwt = false
 
