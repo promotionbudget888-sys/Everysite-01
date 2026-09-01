@@ -27,11 +27,12 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-card px-6">
-          <SidebarTrigger className="-ml-2" />
+      <SidebarInset className="min-w-0">
+        <header className="flex h-14 items-center gap-3 border-b bg-card px-3 sm:px-6 sticky top-0 z-20">
+          <SidebarTrigger className="-ml-1" />
+          <span className="font-semibold text-sm sm:hidden">งบส่งเสริม</span>
         </header>
-        <main className="flex-1 p-6 animate-fade-in">
+        <main className="flex-1 min-w-0 p-3 sm:p-4 md:p-6 animate-fade-in">
           <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </SidebarInset>

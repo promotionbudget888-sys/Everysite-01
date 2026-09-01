@@ -249,7 +249,7 @@ export default function Dashboard() {
         ) : (
           <>
             {/* summary cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard title="งบทั้งหมด" icon={<Wallet className="h-4 w-4 text-muted-foreground" />} value={baht(totals.budget)} />
               <StatCard title="ใช้ไป" icon={<TrendingDown className="h-4 w-4 text-muted-foreground" />} value={baht(totals.used)} valueColor={C_USED} sub={`${pctUsed}% ของงบทั้งหมด`} />
               <StatCard title="คงเหลือ" icon={<PiggyBank className="h-4 w-4 text-muted-foreground" />} value={baht(totals.remaining)} valueClass="text-success" />
@@ -257,7 +257,7 @@ export default function Dashboard() {
             </div>
 
             {/* usage + monthly trend */}
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <Card className="lg:col-span-1">
                 <CardHeader className="pb-3"><CardTitle className="text-base">การใช้งบรวม</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -297,7 +297,7 @@ export default function Dashboard() {
             </div>
 
             {/* status: chart + amounts */}
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <Card className="lg:col-span-2">
                 <CardHeader className="pb-2"><CardTitle className="text-base">คำขอตามสถานะ ({fRequests.length})</CardTitle></CardHeader>
                 <CardContent>
@@ -317,14 +317,16 @@ export default function Dashboard() {
               <Card className="lg:col-span-1">
                 <CardHeader className="pb-2"><CardTitle className="text-base">ยอดเงินตามสถานะ</CardTitle></CardHeader>
                 <CardContent className="pt-0">
-                  <Table>
-                    <TableHeader><TableRow><TableHead>สถานะ</TableHead><TableHead className="text-right">จำนวน</TableHead><TableHead className="text-right">ยอดเงิน</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                      {byStatus.map((s) => (
-                        <TableRow key={s.status}><TableCell className="py-1.5">{s.label}</TableCell><TableCell className="text-right py-1.5 tabular-nums">{s.count}</TableCell><TableCell className="text-right py-1.5 tabular-nums">{baht(s.amount)}</TableCell></TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader><TableRow><TableHead>สถานะ</TableHead><TableHead className="text-right">จำนวน</TableHead><TableHead className="text-right">ยอดเงิน</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                        {byStatus.map((s) => (
+                          <TableRow key={s.status}><TableCell className="py-1.5">{s.label}</TableCell><TableCell className="text-right py-1.5 tabular-nums">{s.count}</TableCell><TableCell className="text-right py-1.5 tabular-nums">{baht(s.amount)}</TableCell></TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -350,7 +352,7 @@ export default function Dashboard() {
             </Card>
 
             {/* affiliation + type + top users */}
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="text-base">สรุปตามสังกัด</CardTitle></CardHeader>
                 <CardContent>
