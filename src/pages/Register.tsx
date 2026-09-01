@@ -20,6 +20,17 @@ const FALLBACK_ZONES: ZoneOption[] = Array.from({ length: 16 }, (_, i) => ({
   name: `โซน ${i + 1}`,
 }));
 
+// ── ตัวกรองอินพุต ──────────────────────────────────────────────
+// อีเมล: อังกฤษ/ตัวเลข/สัญลักษณ์เท่านั้น (ตัดภาษาไทย/ช่องว่าง/อักขระนอก ASCII)
+const sanitizeEmail = (v: string) => v.replace(/[^\x21-\x7E]/g, '');
+// เบอร์โทร: ตัวเลขล้วน สูงสุด 10 หลัก
+const sanitizePhone = (v: string) => v.replace(/\D/g, '').slice(0, 10);
+// ฝ่ายที่: ตัวเลขล้วน
+const sanitizeDigits = (v: string) => v.replace(/\D/g, '');
+// สาขา: ภาษาไทย + ช่องว่างเท่านั้น
+const sanitizeThai = (v: string) => v.replace(/[^฀-๿\s]/g, '');
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function Register() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -77,12 +88,13 @@ export default function Register() {
     if (!firstName.trim()) { toast({ title: 'กรุณากรอกชื่อ', variant: 'destructive' }); return; }
     if (!lastName.trim())  { toast({ title: 'กรุณากรอกนามสกุล', variant: 'destructive' }); return; }
     if (!email.trim())     { toast({ title: 'กรุณากรอกอีเมล', variant: 'destructive' }); return; }
+    if (!EMAIL_RE.test(email.trim())) { toast({ title: 'อีเมลไม่ถูกต้อง', description: 'กรอกเป็นภาษาอังกฤษ ตัวเลข และสัญลักษณ์ เช่น name@email.com', variant: 'destructive' }); return; }
     if (!password.trim())  { toast({ title: 'กรุณากรอกรหัสผ่าน', variant: 'destructive' }); return; }
-    if (!phone.trim())     { toast({ title: 'กรุณากรอกเบอร์โทรศัพท์', variant: 'destructive' }); return; }
+    if (!/^\d{10}$/.test(phone)) { toast({ title: 'เบอร์โทรไม่ถูกต้อง', description: 'ต้องเป็นตัวเลข 10 หลัก', variant: 'destructive' }); return; }
     if (!affiliation)      { toast({ title: 'กรุณาเลือกสายการตลาด', variant: 'destructive' }); return; }
     if (!zoneId)           { toast({ title: 'กรุณาเลือกโซน', variant: 'destructive' }); return; }
-    if (!department.trim()){ toast({ title: 'กรุณากรอกฝ่ายที่', variant: 'destructive' }); return; }
-    if (!branch.trim())    { toast({ title: 'กรุณากรอกสาขา', variant: 'destructive' }); return; }
+    if (!/^\d+$/.test(department.trim())) { toast({ title: 'ฝ่ายที่ต้องเป็นตัวเลข', variant: 'destructive' }); return; }
+    if (!branch.trim())    { toast({ title: 'กรุณากรอกสาขา (ภาษาไทย)', variant: 'destructive' }); return; }
 
     if (password !== confirmPassword) {
       toast({ title: 'รหัสผ่านไม่ตรงกัน', variant: 'destructive' });
@@ -197,7 +209,7 @@ export default function Register() {
 
               <div className="space-y-2">
                 <Label htmlFor="email">อีเมล *</Label>
-                <Input id="email" type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-11" />
+                <Input id="email" type="email" inputMode="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(sanitizeEmail(e.target.value))} required className="h-11" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -213,7 +225,7 @@ export default function Register() {
 
               <div className="space-y-2">
                 <Label htmlFor="phone">เบอร์โทรศัพท์ *</Label>
-                <Input id="phone" type="tel" placeholder="0812345678" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-11" />
+                <Input id="phone" type="tel" inputMode="numeric" maxLength={10} placeholder="0812345678" value={phone} onChange={(e) => setPhone(sanitizePhone(e.target.value))} className="h-11" />
               </div>
 
               <div className="space-y-2">
@@ -255,12 +267,12 @@ export default function Register() {
 
               <div className="space-y-2">
                 <Label htmlFor="department">ฝ่ายที่ *</Label>
-                <Input id="department" placeholder="ฝ่ายที่" value={department} onChange={(e) => setDepartment(e.target.value)} className="h-11" />
+                <Input id="department" inputMode="numeric" placeholder="ฝ่ายที่ (ตัวเลข)" value={department} onChange={(e) => setDepartment(sanitizeDigits(e.target.value))} className="h-11" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="branch">สาขา *</Label>
-                <Input id="branch" placeholder="สาขา" value={branch} onChange={(e) => setBranch(e.target.value)} className="h-11" />
+                <Input id="branch" lang="th" placeholder="สาขา (ภาษาไทย)" value={branch} onChange={(e) => setBranch(sanitizeThai(e.target.value))} className="h-11" />
               </div>
 
               <Button type="submit" className="w-full h-11 gradient-primary" disabled={loading}>
