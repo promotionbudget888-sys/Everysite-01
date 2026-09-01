@@ -189,6 +189,11 @@ export default function UserManagement() {
     return matchSearch && matchTab && matchZone;
   });
 
+  // บัญชีพิเศษ (God Mode) ลอยขึ้นบนสุดเสมอ — เรามีอำนาจเหนือทุกคน
+  const sorted = [...filtered].sort(
+    (a, b) => (isSpecialUser(b.email) ? 1 : 0) - (isSpecialUser(a.email) ? 1 : 0)
+  );
+
   const fmt  = (n: number) => (n ?? 0).toLocaleString('th-TH');
   const fmtB = (n: number) => `฿${(n ?? 0).toLocaleString('th-TH')}`;
 
@@ -278,28 +283,33 @@ export default function UserManagement() {
                     <TableRow><TableCell colSpan={10} className="text-center py-10"><div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mx-auto" /></TableCell></TableRow>
                   ) : filtered.length === 0 ? (
                     <TableRow><TableCell colSpan={10} className="text-center py-10 text-muted-foreground">ไม่พบข้อมูลผู้ใช้</TableCell></TableRow>
-                  ) : filtered.map((user) => (
-                    <TableRow key={user.id}>
+                  ) : sorted.map((user) => {
+                    const special = isSpecialUser(user.email);
+                    return (
+                    <TableRow key={user.id} className={special ? 'bg-amber-50/40' : undefined}>
                       <TableCell>
                         <div className="font-medium text-sm flex items-center gap-1">
-                          {isSpecialUser(user.email) && <span>👑</span>}
+                          {special && <span>👑</span>}
                           {user.full_name}
                         </div>
                         <div className="mt-0.5">
-                          <Badge variant="outline" className={`text-xs px-1 py-0 ${isSpecialUser(user.email) ? 'border-amber-400/60 text-amber-600 bg-amber-50' : ''}`}>
+                          <Badge variant="outline" className={`text-xs px-1 py-0 ${special ? 'border-amber-400/60 text-amber-600 bg-amber-50' : ''}`}>
                             {getDisplayTitle(user.email, user.role)}
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{special ? <span className="text-muted-foreground">🔒 ซ่อนไว้</span> : user.email}</TableCell>
                       <TableCell className="text-sm">{user.zone_id ? `โซน ${user.zone_id}` : <span className="text-muted-foreground">-</span>}</TableCell>
-                      <TableCell className="text-sm">{user.department || <span className="text-muted-foreground">-</span>}</TableCell>
+                      <TableCell className="text-sm">{special ? <span className="text-muted-foreground">-</span> : (user.department || <span className="text-muted-foreground">-</span>)}</TableCell>
                       <TableCell className="text-sm">{user.affiliation || <span className="text-muted-foreground">-</span>}</TableCell>
                       <TableCell className="text-right text-sm tabular-nums font-medium">{fmt(user.budget_matching_fund)}</TableCell>
                       <TableCell className="text-right text-sm tabular-nums font-medium">{fmt(user.budget_everysite)}</TableCell>
                       <TableCell className="text-right text-sm tabular-nums">{fmt((user.used_matching_fund ?? 0) + (user.used_everysite ?? 0))}</TableCell>
                       <TableCell>{statusBadge(user.status)}</TableCell>
                       <TableCell className="text-right">
+                        {special ? (
+                          <span className="text-xs text-amber-600 whitespace-nowrap">👑 จัดการไม่ได้</span>
+                        ) : (
                         <div className="flex justify-end gap-1 flex-wrap">
                           {user.status === 'pending' && <>
                             <Button size="sm" variant="outline" className="text-success hover:bg-success/10" disabled={actionLoading === user.id} onClick={() => updateUserStatus(user.id, 'approved')}>
@@ -316,9 +326,10 @@ export default function UserManagement() {
                             <Trash2 className="h-3 w-3 mr-1" />ลบ
                           </Button>
                         </div>
+                        )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  );})}
                 </TableBody>
               </Table>
             </div>
