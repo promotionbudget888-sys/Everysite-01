@@ -45,7 +45,8 @@ Deno.serve(async (req) => {
 
     if (action === "set_password") {
       if (!password || String(password).length < 6) return json({ error: "รหัสผ่านต้องอย่างน้อย 6 ตัว" }, 400);
-      const { error } = await admin.auth.admin.updateUserById(target.user_id, { password: String(password) });
+      // email_confirm: true → ยืนยันอีเมลไปในตัว ป้องกันเคส "รหัสถูกแต่ login ไม่ได้ (Email not confirmed)"
+      const { error } = await admin.auth.admin.updateUserById(target.user_id, { password: String(password), email_confirm: true });
       if (error) return json({ error: error.message }, 400);
       return json({ success: true, email: target.email });
     }
