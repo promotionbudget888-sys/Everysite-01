@@ -309,6 +309,27 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          value: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          key: string
+          value?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          key?: string
+          value?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_size_code: { Args: Record<string, never>; Returns: string }

@@ -4,9 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LogIn } from 'lucide-react';
+import { LogIn, Mail, Lock } from 'lucide-react';
+import { AuthHero } from '@/components/auth/AuthHero';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -81,52 +81,47 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          {/* ✅ โลโก้จาก public */}
-          <img
-            src="/logo.png"
-            alt="Logo"
-            className="w-24 h-24 object-contain mx-auto mb-4 drop-shadow-lg"
-          />
+    <div className="min-h-screen w-full bg-muted/40 md:grid md:grid-cols-2 lg:grid-cols-[1.05fr_1fr]">
+      {/* ครึ่งซ้าย: แบนเนอร์แบรนด์ (ตั้งรูปได้จากหน้าตั้งค่า) */}
+      <AuthHero />
 
-          <h1 className="text-2xl font-bold text-foreground">
-            งบส่งเสริม
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Everysite Funds
-          </p>
-        </div>
+      {/* ครึ่งขวา: ฟอร์มเข้าสู่ระบบ */}
+      <div className="flex min-h-screen items-center justify-center p-6 sm:p-10">
+        <div className="w-full max-w-sm animate-fade-in">
+          {/* โลโก้ย่อ สำหรับจอมือถือที่ไม่มีแบนเนอร์ */}
+          <div className="mb-8 flex flex-col items-center text-center md:hidden">
+            <img src="/logo.png" alt="Logo" className="mb-3 h-16 w-16 object-contain drop-shadow" />
+            <h1 className="text-xl font-bold">งบส่งเสริม</h1>
+            <p className="text-sm text-muted-foreground">Everysite Funds</p>
+          </div>
 
-        <Card className="shadow-elegant border-0">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl">
-              เข้าสู่ระบบ
-            </CardTitle>
-            <CardDescription>
-              กรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งาน
-            </CardDescription>
-          </CardHeader>
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold tracking-tight">เข้าสู่ระบบ</h2>
+            <p className="mt-1 text-sm text-muted-foreground">กรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งาน</p>
+          </div>
 
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">อีเมล</Label>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">อีเมล</Label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
+                  inputMode="email"
                   placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-11"
+                  className="h-11 pl-10"
                 />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">รหัสผ่าน</Label>
+            <div className="space-y-2">
+              <Label htmlFor="password">รหัสผ่าน</Label>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
@@ -134,39 +129,34 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-11"
+                  className="h-11 pl-10"
                 />
               </div>
-
-              <Button
-                type="submit"
-                className="w-full h-11 gradient-primary"
-                disabled={loading}
-              >
-                {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
-                ) : (
-                  <>
-                    <LogIn className="w-4 h-4 mr-2" />
-                    เข้าสู่ระบบ
-                  </>
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-4 text-center text-sm">
-              <span className="text-muted-foreground">
-                ยังไม่มีบัญชี?{' '}
-              </span>
-              <Link
-                to="/register"
-                className="text-primary hover:underline font-medium"
-              >
-                สมัครสมาชิก
-              </Link>
             </div>
-          </CardContent>
-        </Card>
+
+            <Button
+              type="submit"
+              className="h-11 w-full gradient-primary text-base"
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  เข้าสู่ระบบ
+                </>
+              )}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center text-sm">
+            <span className="text-muted-foreground">ยังไม่มีบัญชี? </span>
+            <Link to="/register" className="font-medium text-primary hover:underline">
+              สมัครสมาชิก
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );

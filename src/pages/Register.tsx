@@ -3,10 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus } from 'lucide-react';
+import { AuthHero } from '@/components/auth/AuthHero';
 import { apiPost } from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -175,25 +175,24 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <img
-            src="/logo.png"
-            alt="Logo"
-            className="w-24 h-24 object-contain mx-auto mb-4 drop-shadow-lg"
-          />
-          <h1 className="text-2xl font-bold text-foreground">งบส่งเสริม</h1>
-          <p className="text-muted-foreground mt-1">Everysite Funds</p>
-        </div>
+    <div className="min-h-screen w-full bg-muted/40 md:grid md:grid-cols-2 lg:grid-cols-[1fr_1.05fr]">
+      {/* ครึ่งซ้าย: แบนเนอร์แบรนด์ */}
+      <AuthHero />
 
-        <Card className="shadow-elegant border-0">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl">สมัครสมาชิก</CardTitle>
-            <CardDescription>กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้งาน</CardDescription>
-          </CardHeader>
+      {/* ครึ่งขวา: ฟอร์มสมัครสมาชิก */}
+      <div className="flex min-h-screen items-center justify-center p-6 sm:p-10">
+        <div className="w-full max-w-md animate-fade-in py-8">
+          <div className="mb-6 flex flex-col items-center text-center md:hidden">
+            <img src="/logo.png" alt="Logo" className="mb-3 h-16 w-16 object-contain drop-shadow" />
+            <h1 className="text-xl font-bold">งบส่งเสริม</h1>
+            <p className="text-sm text-muted-foreground">Everysite Funds</p>
+          </div>
 
-          <CardContent>
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold tracking-tight">สมัครสมาชิก</h2>
+            <p className="mt-1 text-sm text-muted-foreground">กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้งาน</p>
+          </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
 
               <div className="grid grid-cols-2 gap-4">
@@ -287,14 +286,13 @@ export default function Register() {
               </Button>
             </form>
 
-            <div className="mt-4 text-center text-sm">
+            <div className="mt-6 text-center text-sm">
               <span className="text-muted-foreground">มีบัญชีแล้ว? </span>
               <Link to="/login" className="text-primary hover:underline font-medium">
                 เข้าสู่ระบบ
               </Link>
             </div>
-          </CardContent>
-        </Card>
+        </div>
       </div>
     </div>
   );
