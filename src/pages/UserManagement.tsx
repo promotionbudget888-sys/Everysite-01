@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { UserCheck, UserX, Search, Users, Clock, CheckCircle, XCircle, Edit, RefreshCw, KeyRound, Trash2 } from 'lucide-react';
-import { UserRole, UserStatus, getRoleLabel } from '@/lib/auth';
+import { UserRole, UserStatus, getRoleLabel, getDisplayTitle, isSpecialUser } from '@/lib/auth';
 import { listUsers, updateUser, setUserStatus } from '@/lib/db';
 import { supabase } from '@/integrations/supabase/client';
 import { ZoneFilter } from '@/components/ZoneFilter';
@@ -42,6 +42,7 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('pending');
   const [filterZone, setFilterZone] = useState('all');
+  const [filterRole, setFilterRole] = useState('all'); // all | requester | admin | me | zone_approver_1 | zone_approver_2
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editRole, setEditRole] = useState<UserRole>('requester');
   const [editZone, setEditZone] = useState('');
@@ -179,7 +180,10 @@ export default function UserManagement() {
     const matchSearch = u.full_name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s);
     const matchStatus = filterStatus === 'all' || u.status === filterStatus;
     const matchZone = filterZone === 'all' || String(u.zone_id ?? '') === filterZone;
-    return matchSearch && matchStatus && matchZone;
+    const matchRole =
+      filterRole === 'all' ||
+      (filterRole === 'me' ? u.email?.toLowerCase() === profile?.email?.toLowerCase() : u.role === filterRole);
+    return matchSearch && matchStatus && matchZone && matchRole;
   });
 
   const fmt  = (n: number) => (n ?? 0).toLocaleString('th-TH');
@@ -238,6 +242,19 @@ export default function UserManagement() {
             <Input placeholder="ค้นหาชื่อหรืออีเมล..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
           </div>
           <ZoneFilter value={filterZone} onChange={setFilterZone} />
+          <Select value={filterRole} onValueChange={setFilterRole}>
+            <SelectTrigger className="w-full sm:w-52">
+              <SelectValue placeholder="บทบาท" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกบทบาท</SelectItem>
+              <SelectItem value="me">👑 ฉัน</SelectItem>
+              <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
+              <SelectItem value="zone_approver_1">ผู้อนุมัติ L1</SelectItem>
+              <SelectItem value="zone_approver_2">ผู้อนุมัติ L2</SelectItem>
+              <SelectItem value="requester">ผู้ขอใช้งบ</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <Card>
@@ -267,8 +284,15 @@ export default function UserManagement() {
                   ) : filtered.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
-                        <div className="font-medium text-sm">{user.full_name}</div>
-                        <div className="mt-0.5"><Badge variant="outline" className="text-xs px-1 py-0">{getRoleLabel(user.role)}</Badge></div>
+                        <div className="font-medium text-sm flex items-center gap-1">
+                          {isSpecialUser(user.email) && <span>👑</span>}
+                          {user.full_name}
+                        </div>
+                        <div className="mt-0.5">
+                          <Badge variant="outline" className={`text-xs px-1 py-0 ${isSpecialUser(user.email) ? 'border-amber-400/60 text-amber-600 bg-amber-50' : ''}`}>
+                            {getDisplayTitle(user.email, user.role)}
+                          </Badge>
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
                       <TableCell className="text-sm">{user.zone_id ? `โซน ${user.zone_id}` : <span className="text-muted-foreground">-</span>}</TableCell>

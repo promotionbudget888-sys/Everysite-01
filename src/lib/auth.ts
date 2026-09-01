@@ -73,6 +73,19 @@ export function getRoleLabel(role: UserRole): string {
   }
 }
 
+// ── ป้ายตำแหน่งพิเศษเฉพาะบางบัญชี (cosmetic — สิทธิ์จริงยังตาม role) ──────────
+export const SPECIAL_TITLES: Record<string, string> = {
+  'suporn300643@gmail.com': 'God Mode 👑',
+};
+export function isSpecialUser(email?: string | null): boolean {
+  return !!email && email.toLowerCase() in SPECIAL_TITLES;
+}
+// ป้ายที่จะแสดง: ถ้าเป็นบัญชีพิเศษใช้ป้ายพิเศษ ไม่งั้นใช้ป้ายตาม role
+export function getDisplayTitle(email: string | null | undefined, role: UserRole): string {
+  const key = (email || '').toLowerCase();
+  return SPECIAL_TITLES[key] || getRoleLabel(role);
+}
+
 export function getStatusLabel(status: UserStatus): string {
   switch (status) {
     case 'pending':  return 'รออนุมัติ';

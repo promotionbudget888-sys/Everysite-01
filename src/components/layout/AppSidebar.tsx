@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { FileText, Users, ClipboardList, History, LogOut, Settings, Trophy, Upload, Bell, LayoutDashboard } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getRoleLabel } from '@/lib/auth';
+import { getDisplayTitle, isSpecialUser } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar,
@@ -19,11 +19,6 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-
-// ป้ายตำแหน่งพิเศษเฉพาะบางคน (override getRoleLabel — สิทธิ์จริงยังตาม role เดิม)
-const SPECIAL_TITLES: Record<string, string> = {
-  'suporn300643@gmail.com': 'God Mode 👑',
-};
 
 export function AppSidebar() {
   const navigate = useNavigate();
@@ -155,7 +150,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 mb-3">
-          {SPECIAL_TITLES[profile?.email ?? ''] ? (
+          {isSpecialUser(profile?.email) ? (
             // 👑 avatar ออร่าเท่ ๆ เฉพาะบางคน
             <div className="relative w-10 h-10 shrink-0">
               <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-fuchsia-500 blur-[6px] opacity-70 animate-pulse" />
@@ -175,7 +170,7 @@ export function AppSidebar() {
               {profile?.full_name || 'ผู้ใช้งาน'}
             </p>
             <Badge variant="outline" className="text-xs bg-sidebar-accent border-sidebar-border text-sidebar-muted">
-              {SPECIAL_TITLES[profile?.email ?? ''] || (profile?.role ? getRoleLabel(profile.role) : 'ไม่ระบุ')}
+              {profile?.role ? getDisplayTitle(profile.email, profile.role) : 'ไม่ระบุ'}
             </Badge>
           </div>
         </div>
