@@ -20,6 +20,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
+// ป้ายตำแหน่งพิเศษเฉพาะบางคน (override getRoleLabel — สิทธิ์จริงยังตาม role เดิม)
+const SPECIAL_TITLES: Record<string, string> = {
+  'suporn300643@gmail.com': 'God Mode 👑',
+};
+
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -160,7 +165,7 @@ export function AppSidebar() {
               {profile?.full_name || 'ผู้ใช้งาน'}
             </p>
             <Badge variant="outline" className="text-xs bg-sidebar-accent border-sidebar-border text-sidebar-muted">
-              {profile?.role ? getRoleLabel(profile.role) : 'ไม่ระบุ'}
+              {SPECIAL_TITLES[profile?.email ?? ''] || (profile?.role ? getRoleLabel(profile.role) : 'ไม่ระบุ')}
             </Badge>
           </div>
         </div>
