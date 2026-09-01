@@ -155,11 +155,21 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 mb-3">
-          <Avatar className="w-10 h-10">
-            <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">
-              {profile?.full_name?.charAt(0) || 'U'}
-            </AvatarFallback>
-          </Avatar>
+          {SPECIAL_TITLES[profile?.email ?? ''] ? (
+            // 👑 avatar ออร่าเท่ ๆ เฉพาะบางคน
+            <div className="relative w-10 h-10 shrink-0">
+              <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-fuchsia-500 blur-[6px] opacity-70 animate-pulse" />
+              <div className="relative w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-fuchsia-600 flex items-center justify-center ring-2 ring-amber-300/70 shadow-[0_0_14px_rgba(251,191,36,0.85)]">
+                <span className="text-lg leading-none">👑</span>
+              </div>
+            </div>
+          ) : (
+            <Avatar className="w-10 h-10">
+              <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">
+                {profile?.full_name?.charAt(0) || 'U'}
+              </AvatarFallback>
+            </Avatar>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">
               {profile?.full_name || 'ผู้ใช้งาน'}
