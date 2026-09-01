@@ -184,9 +184,7 @@ export default function UserManagement() {
         ? true
         : STATUS_TABS.includes(filterStatus)
           ? u.status === filterStatus
-          : filterStatus === 'me'
-            ? u.email?.toLowerCase() === profile?.email?.toLowerCase()
-            : u.role === filterStatus;
+          : u.role === filterStatus;
     const matchZone = filterZone === 'all' || String(u.zone_id ?? '') === filterZone;
     return matchSearch && matchTab && matchZone;
   });
@@ -206,7 +204,6 @@ export default function UserManagement() {
   const cAdmin = users.filter(u => u.role === 'admin').length;
   const cL1    = users.filter(u => u.role === 'zone_approver_1').length;
   const cL2    = users.filter(u => u.role === 'zone_approver_2').length;
-  const cMe    = users.filter(u => u.email?.toLowerCase() === profile?.email?.toLowerCase()).length;
   const totalMF   = users.reduce((s, u) => s + (u.budget_matching_fund ?? 0), 0);
   const totalES   = users.reduce((s, u) => s + (u.budget_everysite ?? 0), 0);
   const totalUsed = users.reduce((s, u) => s + (u.used_matching_fund ?? 0) + (u.used_everysite ?? 0), 0);
@@ -244,7 +241,6 @@ export default function UserManagement() {
             <TabsTrigger value="all">ทั้งหมด ({users.length})</TabsTrigger>
             <span className="mx-1 self-center text-muted-foreground/40">|</span>
             <TabsTrigger value="admin">ผู้ดูแลระบบ ({cAdmin})</TabsTrigger>
-            <TabsTrigger value="me">👑 ฉัน ({cMe})</TabsTrigger>
             <TabsTrigger value="zone_approver_1">ผู้อนุมัติ L1 ({cL1})</TabsTrigger>
             <TabsTrigger value="zone_approver_2">ผู้อนุมัติ L2 ({cL2})</TabsTrigger>
           </TabsList>
