@@ -161,3 +161,22 @@
   .recharts-wrapper, table, .rounded-lg { break-inside: avoid; }
   body { background: #fff !important; }
 }
+
+/* ── ออร่าชื่อ God Mode (ตัวอักษรไล่เฉดทอง-ม่วง เรืองแสงวิบวับ) ───────── */
+.aura-name {
+  font-weight: 700;
+  background: linear-gradient(90deg, #f59e0b, #fde047, #d946ef, #f59e0b);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.75)) drop-shadow(0 0 10px rgba(217, 70, 239, 0.4));
+  animation: aura-shimmer 3s linear infinite;
+}
+@keyframes aura-shimmer {
+  to { background-position: 200% center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aura-name { animation: none; }
+}

@@ -76,7 +76,7 @@ export default function AuditLogs() {
 
   const getRoleBadge = (role: string) => {
     switch (role) {
-      case "admin": return <Badge className="bg-primary">ผู้ดูแลระบบ</Badge>;
+      case "admin": return <Badge className="bg-primary">ผู้จัดการงบส่งเสริม</Badge>;
       case "zone_approver": return <Badge variant="secondary">ผู้อนุมัติโซน</Badge>;
       default: return <Badge variant="outline">ผู้ขอใช้งบ</Badge>;
     }

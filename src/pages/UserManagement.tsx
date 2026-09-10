@@ -245,7 +245,7 @@ export default function UserManagement() {
             <TabsTrigger value="rejected">ปฏิเสธ ({rejected})</TabsTrigger>
             <TabsTrigger value="all">ทั้งหมด ({users.length})</TabsTrigger>
             <span className="mx-1 self-center text-muted-foreground/40">|</span>
-            <TabsTrigger value="admin">ผู้ดูแลระบบ ({cAdmin})</TabsTrigger>
+            <TabsTrigger value="admin">ผู้จัดการงบส่งเสริม ({cAdmin})</TabsTrigger>
             <TabsTrigger value="zone_approver_1">ผู้อนุมัติ L1 ({cL1})</TabsTrigger>
             <TabsTrigger value="zone_approver_2">ผู้อนุมัติ L2 ({cL2})</TabsTrigger>
           </TabsList>
@@ -290,7 +290,7 @@ export default function UserManagement() {
                       <TableCell>
                         <div className="font-medium text-sm flex items-center gap-1">
                           {special && <span>👑</span>}
-                          {user.full_name}
+                          <span className={special ? 'aura-name' : undefined}>{user.full_name}</span>
                         </div>
                         <div className="mt-0.5">
                           <Badge variant="outline" className={`text-xs px-1 py-0 ${special ? 'border-amber-400/60 text-amber-600 bg-amber-50' : ''}`}>
@@ -351,7 +351,7 @@ export default function UserManagement() {
                     <SelectItem value="requester">ผู้ขอใช้งบ</SelectItem>
                     <SelectItem value="zone_approver_1">ผู้อนุมัติ Level 1</SelectItem>
                     <SelectItem value="zone_approver_2">ผู้อนุมัติ Level 2</SelectItem>
-                    <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
+                    <SelectItem value="admin">ผู้จัดการงบส่งเสริม</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

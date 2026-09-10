@@ -166,7 +166,7 @@ export function AppSidebar() {
             </Avatar>
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">
+            <p className={`text-sm font-medium truncate ${isSpecialUser(profile?.email) ? 'aura-name' : 'text-sidebar-foreground'}`}>
               {profile?.full_name || 'ผู้ใช้งาน'}
             </p>
             <Badge variant="outline" className="text-xs bg-sidebar-accent border-sidebar-border text-sidebar-muted">
