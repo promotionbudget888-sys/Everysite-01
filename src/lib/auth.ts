@@ -68,7 +68,7 @@ export function getRoleLabel(role: UserRole): string {
     case 'requester':       return 'ผู้ขอใช้งบ';
     case 'zone_approver_1': return 'ผู้อนุมัติ Level 1';
     case 'zone_approver_2': return 'ผู้อนุมัติ Level 2';
-    case 'admin':           return 'ผู้จัดการงบส่งเสริม';
+    case 'admin':           return 'ผู้จัดการงบส่งเสริม 💼';
     default:                return role;
   }
 }

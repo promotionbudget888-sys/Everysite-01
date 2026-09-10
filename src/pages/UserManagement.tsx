@@ -293,7 +293,7 @@ export default function UserManagement() {
                           <span className={special ? 'aura-name' : undefined}>{user.full_name}</span>
                         </div>
                         <div className="mt-0.5">
-                          <Badge variant="outline" className={`text-xs px-1 py-0 ${special ? 'border-amber-400/60 text-amber-600 bg-amber-50' : ''}`}>
+                          <Badge variant="outline" className={`text-xs px-1 py-0 ${user.role === 'admin' ? 'aura-name border-amber-400/60' : ''} ${special ? 'bg-amber-50' : ''}`}>
                             {getDisplayTitle(user.email, user.role)}
                           </Badge>
                         </div>

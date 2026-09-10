@@ -169,7 +169,7 @@ export function AppSidebar() {
             <p className={`text-sm font-medium truncate ${isSpecialUser(profile?.email) ? 'aura-name' : 'text-sidebar-foreground'}`}>
               {profile?.full_name || 'ผู้ใช้งาน'}
             </p>
-            <Badge variant="outline" className="text-xs bg-sidebar-accent border-sidebar-border text-sidebar-muted">
+            <Badge variant="outline" className={`text-xs bg-sidebar-accent border-sidebar-border ${profile?.role === 'admin' ? 'aura-name border-amber-400/50' : 'text-sidebar-muted'}`}>
               {profile?.role ? getDisplayTitle(profile.email, profile.role) : 'ไม่ระบุ'}
             </Badge>
           </div>
